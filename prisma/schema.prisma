@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  FACULTY
+  INDUSTRY_PARTNER
+  RECRUITER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roadmaps  Roadmap[]
+  feedbackGiven    Feedback[] @relation("FeedbackGiven")
+  feedbackReceived Feedback[] @relation("FeedbackReceived")
+}
+
+model Skill {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  category  String?  
+  courses   Course[] @relation("CourseSkills")
+  roadmaps  Roadmap[] @relation("RoadmapSkills")
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  url         String?
+  skills      Skill[]  @relation("CourseSkills")
+}
+
+model Roadmap {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  targetRole  String   
+  skills      Skill[]  @relation("RoadmapSkills")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Feedback {
+  id          String   @id @default(uuid())
+  content     String
+  authorId    String
+  author      User     @relation("FeedbackGiven", fields: [authorId], references: [id])
+  recipientId String
+  recipient   User     @relation("FeedbackReceived", fields: [recipientId], references: [id])
+  createdAt   DateTime @default(now())
+}

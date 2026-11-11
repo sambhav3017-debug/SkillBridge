@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# SkillBridge demo data store (local file backend)
+/.data
+/.data/
+demo-db.json*
+
+# Backups & local checkpoints
+/.backup_checkpoint/
+.backup_checkpoint
+
+# Local AI agent configs & workspace scratch
+/.agents/
+/.claude/
+/.windsurf/
+skills-lock.json
+
+# Local test & verification scripts
+verify_*.mjs
+scripts/verify_*.mjs
