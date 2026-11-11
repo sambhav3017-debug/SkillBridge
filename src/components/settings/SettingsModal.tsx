@@ -7,7 +7,6 @@ import {
   Globe,
   Sun,
   Moon,
-  Monitor,
   Activity,
   Type,
   Eye,
@@ -19,7 +18,7 @@ import {
   Briefcase,
   ChevronRight,
 } from "lucide-react";
-import { useTheme, ThemeMode } from "@/components/theme/ThemeProvider";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { SkillBridgeToggle } from "@/components/ui/SkillBridgeToggle";
 
@@ -58,7 +57,7 @@ export default function SettingsModal({
   onClose,
   onOpenSearch,
 }: SettingsModalProps) {
-  const { theme, themeMode, setThemeMode } = useTheme();
+  const { theme, setThemeMode } = useTheme();
   const { language, setLanguage, t } = useLanguage();
 
   // Accessibility settings initialized safely
@@ -100,14 +99,6 @@ export default function SettingsModal({
       document.removeEventListener("pointerdown", onPointerDown);
     };
   }, [isOpen, onClose]);
-
-  // Handle Theme Mode Change
-  const handleThemeChange = (mode: ThemeMode, e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX || rect.left + rect.width / 2;
-    const y = e.clientY || rect.top + rect.height / 2;
-    setThemeMode(mode, { x, y });
-  };
 
   // Handle Reduced Motion Toggle
   const handleToggleReducedMotion = () => {
@@ -219,7 +210,7 @@ export default function SettingsModal({
           </h3>
 
           <div className="rounded-[14px] border border-black/[0.06] dark:border-white/[0.07] bg-black/[0.025] dark:bg-[#1C1C1E] overflow-hidden">
-            {/* Row 1: Night Mode / Dark Theme Switch */}
+            {/* Night Mode / Dark Theme Switch */}
             <div className="flex items-center justify-between gap-3 px-3 py-2.5">
               <div className="flex items-center gap-2.5">
                 <div className="grid h-7 w-7 place-items-center rounded-[7px] bg-[#1C1C1E] dark:bg-[#2C2C2E] text-slate-200 dark:text-[#CDCBCA] shadow-2xs">
@@ -241,54 +232,6 @@ export default function SettingsModal({
                 aria-label="Toggle dark mode"
                 accent="cyan"
               />
-            </div>
-
-            {/* Hairline Divider */}
-            <div className="border-t border-black/[0.05] dark:border-white/[0.06] ml-12" />
-
-            {/* Row 2: Theme Segmented Control (Light / Dark / System) */}
-            <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-              <div className="flex items-center gap-2.5">
-                <div className="grid h-7 w-7 place-items-center rounded-[7px] bg-slate-200/80 dark:bg-[#2C2C2E] text-slate-700 dark:text-[#CDCBCA] shadow-2xs">
-                  <Monitor size={14} />
-                </div>
-                <span className="text-[0.82rem] font-medium text-slate-900 dark:text-[#F5F5F7]">
-                  Theme
-                </span>
-              </div>
-
-              {/* Native Apple Segmented Control */}
-              <div
-                role="radiogroup"
-                aria-label="Theme mode"
-                className="flex items-center gap-0.5 rounded-[8px] bg-black/[0.05] dark:bg-[#2C2C2E] p-0.5"
-              >
-                {[
-                  { id: "light" as ThemeMode, label: t.settings.themeLight, icon: Sun },
-                  { id: "dark" as ThemeMode, label: t.settings.themeDark, icon: Moon },
-                  { id: "system" as ThemeMode, label: t.settings.themeSystem, icon: Monitor },
-                ].map(({ id, label, icon: Icon }) => {
-                  const isSelected = themeMode === id;
-                  return (
-                    <button
-                      key={id}
-                      id={`settings-theme-${id}`}
-                      type="button"
-                      role="radio"
-                      aria-checked={isSelected}
-                      onClick={(e) => handleThemeChange(id, e)}
-                      className={`flex items-center gap-1 rounded-[6px] px-2 py-1 text-[0.72rem] transition-all duration-150 cursor-pointer ${
-                        isSelected
-                          ? "bg-white dark:bg-[#3A3A3C] text-slate-900 dark:text-white font-medium shadow-[0_1px_2px_rgba(0,0,0,0.12)]"
-                          : "text-slate-500 dark:text-[#8E8C8B] hover:text-slate-900 dark:hover:text-white"
-                      }`}
-                    >
-                      <Icon size={11} />
-                      <span>{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           </div>
         </section>
