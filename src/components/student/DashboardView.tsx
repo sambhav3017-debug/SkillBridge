@@ -234,7 +234,7 @@ export default function DashboardView() {
 
             <div className="flex items-center gap-3">
               {/* Filter Pills */}
-              <div className="flex items-center gap-1 p-1 rounded-xl bg-[#F7F7F7] dark:bg-white/5 border border-[#E3E3E3] dark:border-white/10">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-[#F7F7F7] dark:bg-white/5 border border-[#E3E3E3] dark:border-white/10 overflow-x-auto scrollbar-none max-w-full shrink-0">
                 {FILTER_OPTIONS.map((opt) => (
                   <button
                     key={opt}

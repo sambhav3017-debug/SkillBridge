@@ -34,12 +34,12 @@ export default function Hero() {
       <HeroStage />
 
       {/* Main Hero Content: Left Column Headline & Narrative */}
-      <div className="relative z-10 mx-auto w-full max-w-[1400px] px-6 sm:px-10 lg:px-16 pointer-events-none">
+      <div className="relative z-10 mx-auto w-full max-w-[1400px] px-4 xs:px-6 sm:px-10 lg:px-16 pointer-events-none">
         <div className="max-w-[36rem] pointer-events-auto">
           {/* Eyebrow */}
           <div
             id="hero-eyebrow"
-            className="rise d1 inline-flex items-center gap-2 tracking-[0.22em] text-[0.75rem] sm:text-[0.82rem] font-semibold uppercase text-[#3E3832] dark:text-[#8E8C8B] select-none"
+            className="rise d1 inline-flex items-center gap-1.5 sm:gap-2 tracking-[0.2em] sm:tracking-[0.22em] text-[0.7rem] sm:text-[0.82rem] font-semibold uppercase text-[#3E3832] dark:text-[#8E8C8B] select-none"
           >
             <span>{t.hero.eyebrow1}</span>
             <span className="opacity-45">/</span>
@@ -53,7 +53,7 @@ export default function Hero() {
           {/* Headline: Exactly 'Your Skills.' and 'Our Bridge.' with periods */}
           <h1
             id="hero-title"
-            className="rise d2 mt-4 sm:mt-5 text-[clamp(2.75rem,5.4vw,5.25rem)] font-[800] leading-[1.04] tracking-[-0.038em]"
+            className="rise d2 mt-3.5 sm:mt-5 text-[clamp(2.15rem,5.4vw,5.25rem)] font-[800] leading-[1.04] tracking-[-0.038em]"
           >
             <span className="block text-[#141311] dark:text-[#CDCBCA]">
               {t.hero.titleLine1}
@@ -71,18 +71,18 @@ export default function Hero() {
           {/* Subtitle / Ecosystem Narrative from Reference Composition */}
           <p
             id="hero-description"
-            className="rise d3 mt-5 sm:mt-6 text-base sm:text-lg leading-relaxed text-[#434D62] dark:text-[#8E8C8B] max-w-[32rem]"
+            className="rise d3 mt-4 sm:mt-6 text-sm sm:text-lg leading-relaxed text-[#434D62] dark:text-[#8E8C8B] max-w-[32rem]"
           >
             A complete ecosystem to learn, build and grow — from college to career.
           </p>
 
           {/* Primary CTA Button: Smooth Scroll to Opportunity Section */}
-          <div className="rise d4 mt-7 sm:mt-9 flex items-center">
+          <div className="rise d4 mt-6 sm:mt-9 flex items-center">
             <a
               id="hero-btn-primary"
               href="#opportunity"
               onClick={handleExploreClick}
-              className="btn btn-crimson group px-6 py-3.5 text-sm sm:text-base font-medium inline-flex items-center gap-2 cursor-pointer"
+              className="btn btn-crimson group px-5 py-3 sm:px-6 sm:py-3.5 text-sm sm:text-base font-medium inline-flex items-center gap-2 cursor-pointer"
               aria-label="Explore Opportunity: Scroll down to discover SkillBridge pathways and verified opportunities"
             >
               <span>Explore Opportunity</span>

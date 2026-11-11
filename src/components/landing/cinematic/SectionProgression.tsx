@@ -192,7 +192,7 @@ const StageButtonCard = memo(function StageButtonCard({
       aria-selected={isActive}
       aria-controls={`progression-panel-${stage.id}`}
       onClick={onSelect}
-      className={`group relative flex flex-col justify-between w-full min-w-[200px] sm:min-w-0 p-4 sm:p-5 rounded-2xl text-left select-none outline-none cursor-pointer transition-all duration-300 active:scale-[0.98] ${
+      className={`group relative flex flex-col justify-between w-full min-w-[170px] sm:min-w-[200px] lg:min-w-0 p-4 sm:p-5 rounded-2xl text-left select-none outline-none cursor-pointer transition-all duration-300 active:scale-[0.98] ${
         isActive
           ? "bg-white dark:bg-[#18181D] border-2 border-[#D41514] shadow-[0_12px_32px_-8px_rgba(212,21,20,0.32)] dark:shadow-[0_12px_32px_-8px_rgba(212,21,20,0.40)] translate-y-[-2px]"
           : isCompleted

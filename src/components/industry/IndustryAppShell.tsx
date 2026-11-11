@@ -758,7 +758,7 @@ export default function IndustryAppShell({ children }: { children: React.ReactNo
           </div>
         </header>
 
-        <main id="main" className="relative mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-8">
+        <main id="main" className="relative mx-auto w-full max-w-[1400px] px-3 sm:px-8 py-5 sm:py-8">
           <DashboardPageTransition>{children}</DashboardPageTransition>
         </main>
       </div>

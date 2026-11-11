@@ -224,75 +224,77 @@ export default function SectionBuild() {
             </p>
 
             {/* Track Switcher with SkillBridge Top Navigation Sliding Liquid Glass System */}
-            <div
-              ref={trackNavRef}
-              onPointerLeave={() => {
-                setHoveredId(null);
-                movePillTo(selectedTrack, false);
-              }}
-              className={`floating-glass-navbar is-top relative mt-8 inline-flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-2xl transition-all duration-700 delay-300 ${
-                inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-              }`}
-            >
-              {/* The Single Continuous Sliding Glass Indicator */}
+            <div className="w-full flex justify-center overflow-x-auto scrollbar-none px-2">
               <div
-                className={`sliding-glass-pill pointer-events-none absolute left-0 top-0 rounded-xl transition-all ${
-                  pillState.isHover ? "is-hovered" : "is-active"
-                }`}
-                style={{
-                  transform: `translate3d(${pillState.left}px, ${pillState.top}px, 0)`,
-                  width: `${pillState.width}px`,
-                  height: `${pillState.height}px`,
-                  opacity: pillState.opacity,
+                ref={trackNavRef}
+                onPointerLeave={() => {
+                  setHoveredId(null);
+                  movePillTo(selectedTrack, false);
                 }}
-                aria-hidden="true"
-              />
+                className={`floating-glass-navbar is-top relative mt-8 inline-flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-2xl max-w-full overflow-x-auto scrollbar-none transition-all duration-700 delay-300 ${
+                  inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+                }`}
+              >
+                {/* The Single Continuous Sliding Glass Indicator */}
+                <div
+                  className={`sliding-glass-pill pointer-events-none absolute left-0 top-0 rounded-xl transition-all ${
+                    pillState.isHover ? "is-hovered" : "is-active"
+                  }`}
+                  style={{
+                    transform: `translate3d(${pillState.left}px, ${pillState.top}px, 0)`,
+                    width: `${pillState.width}px`,
+                    height: `${pillState.height}px`,
+                    opacity: pillState.opacity,
+                  }}
+                  aria-hidden="true"
+                />
 
-              {/* Individual Navigation Item Buttons */}
-              {(Object.keys(TRACKS) as TrackKey[]).map((key) => {
-                const isSelected = selectedTrack === key;
-                const isHovered = hoveredId === key;
-                return (
-                  <button
-                    key={key}
-                    ref={(el) => {
-                      if (el) itemRefs.current.set(key, el);
-                      else itemRefs.current.delete(key);
-                    }}
-                    type="button"
-                    id={`track-btn-${key}`}
-                    onPointerEnter={() => {
-                      setHoveredId(key);
-                      movePillTo(key, true);
-                    }}
-                    onFocus={() => {
-                      setHoveredId(key);
-                      movePillTo(key, true);
-                    }}
-                    onBlur={(e) => {
-                      if (trackNavRef.current && !trackNavRef.current.contains(e.relatedTarget as Node)) {
+                {/* Individual Navigation Item Buttons */}
+                {(Object.keys(TRACKS) as TrackKey[]).map((key) => {
+                  const isSelected = selectedTrack === key;
+                  const isHovered = hoveredId === key;
+                  return (
+                    <button
+                      key={key}
+                      ref={(el) => {
+                        if (el) itemRefs.current.set(key, el);
+                        else itemRefs.current.delete(key);
+                      }}
+                      type="button"
+                      id={`track-btn-${key}`}
+                      onPointerEnter={() => {
+                        setHoveredId(key);
+                        movePillTo(key, true);
+                      }}
+                      onFocus={() => {
+                        setHoveredId(key);
+                        movePillTo(key, true);
+                      }}
+                      onBlur={(e) => {
+                        if (trackNavRef.current && !trackNavRef.current.contains(e.relatedTarget as Node)) {
+                          setHoveredId(null);
+                          movePillTo(selectedTrack, false);
+                        }
+                      }}
+                      onClick={() => {
+                        setSelectedTrack(key);
                         setHoveredId(null);
-                        movePillTo(selectedTrack, false);
-                      }
-                    }}
-                    onClick={() => {
-                      setSelectedTrack(key);
-                      setHoveredId(null);
-                      movePillTo(key, false);
-                    }}
-                    aria-pressed={isSelected}
-                    className={`nav-item-link relative z-10 rounded-xl px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-medium outline-none select-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-white/20 ${
-                      isSelected
-                        ? "text-slate-900 font-semibold dark:text-white"
-                        : isHovered
-                        ? "text-slate-800 font-medium dark:text-[#CDCBCA]"
-                        : "text-slate-500 hover:text-slate-900 dark:text-[#8E8C8B] dark:hover:text-[#CDCBCA]"
-                    }`}
-                  >
-                    <span className="relative z-10">{TRACKS[key].label}</span>
-                  </button>
-                );
-              })}
+                        movePillTo(key, false);
+                      }}
+                      aria-pressed={isSelected}
+                      className={`nav-item-link relative z-10 rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap outline-none select-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-white/20 ${
+                        isSelected
+                          ? "text-slate-900 font-semibold dark:text-white"
+                          : isHovered
+                          ? "text-slate-800 font-medium dark:text-[#CDCBCA]"
+                          : "text-slate-500 hover:text-slate-900 dark:text-[#8E8C8B] dark:hover:text-[#CDCBCA]"
+                      }`}
+                    >
+                      <span className="relative z-10">{TRACKS[key].label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -368,22 +370,22 @@ export default function SectionBuild() {
                   </div>
 
                   {/* Real-time Project Progress Metrics */}
-                  <div className="grid grid-cols-3 gap-3 rounded-2xl border border-neutral-200/70 bg-neutral-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02]">
-                    <div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 rounded-2xl border border-neutral-200/70 bg-neutral-50/50 p-3.5 sm:p-4 dark:border-white/10 dark:bg-white/[0.02]">
+                    <div className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-start">
                       <div className="text-[0.68rem] text-neutral-500 dark:text-neutral-400">Test Harness</div>
-                      <div className="mt-1 font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
+                      <div className="font-mono text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 sm:mt-1">
                         {track.testsPassed}/{track.totalTests} Pass
                       </div>
                     </div>
-                    <div>
+                    <div className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-start">
                       <div className="text-[0.68rem] text-neutral-500 dark:text-neutral-400">Code Coverage</div>
-                      <div className="mt-1 font-mono text-base font-bold text-[#007BA7] dark:text-[#19B8E6]">
+                      <div className="font-mono text-sm sm:text-base font-bold text-[#007BA7] dark:text-[#19B8E6] sm:mt-1">
                         {track.coverage}
                       </div>
                     </div>
-                    <div>
+                    <div className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-start">
                       <div className="text-[0.68rem] text-neutral-500 dark:text-neutral-400">Faculty Review</div>
-                      <div className="mt-1 flex items-center gap-1 text-xs font-bold text-purple-600 dark:text-purple-400">
+                      <div className="flex items-center gap-1 text-xs font-bold text-purple-600 dark:text-purple-400 sm:mt-1">
                         <ShieldCheck className="h-4 w-4" />
                         <span>Signed</span>
                       </div>
@@ -395,19 +397,19 @@ export default function SectionBuild() {
                 <div className="lg:col-span-7 flex flex-col rounded-2xl border border-neutral-200/80 bg-[#0F1420] text-neutral-100 shadow-inner overflow-hidden">
                   {/* Editor Header Bar */}
                   <div className="flex items-center justify-between border-b border-white/10 bg-[#161D2E] px-4 py-2.5 text-xs text-neutral-400">
-                    <div className="flex items-center gap-2">
-                      <Terminal className="h-3.5 w-3.5 text-pink-400" />
-                      <span className="font-mono text-white">VerificationHarness.ts</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Terminal className="h-3.5 w-3.5 text-pink-400 shrink-0" />
+                      <span className="font-mono text-white truncate">VerificationHarness.ts</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <span className="h-2 w-2 rounded-full bg-emerald-400" />
                       <span className="text-[0.7rem] text-emerald-300">Live Workspace</span>
                     </div>
                   </div>
 
                   {/* Syntax Highlighted Code Box */}
-                  <div className="relative p-5 font-mono text-xs leading-relaxed overflow-x-auto text-blue-200">
-                    <pre className="text-neutral-300">
+                  <div className="relative p-3.5 sm:p-5 font-mono text-[0.72rem] sm:text-xs leading-relaxed overflow-x-auto text-blue-200 max-w-full">
+                    <pre className="text-neutral-300 overflow-x-auto max-w-full">
                       <code>{track.codeSnippet}</code>
                     </pre>
 

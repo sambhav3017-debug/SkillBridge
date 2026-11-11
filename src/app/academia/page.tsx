@@ -59,7 +59,7 @@ export default async function AcademiaEntryPage() {
   const current = await getCurrentAcademia();
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+    <div className="min-h-screen overflow-x-hidden bg-[var(--color-bg)] text-[var(--color-text)]">
       <Header />
 
       <main className="relative overflow-hidden pb-24 pt-12 sm:pt-16">

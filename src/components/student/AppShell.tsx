@@ -763,7 +763,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="student-app-root relative min-h-screen bg-[#080808] light:bg-[#F1F1F1] transition-colors duration-300">
+    <div className="student-app-root relative min-h-screen overflow-x-hidden bg-[#080808] light:bg-[#F1F1F1] transition-colors duration-300">
       <div className="pointer-events-none fixed -left-40 top-0 h-[420px] w-[420px] rounded-full bg-[rgba(205,203,202,0.02)] light:opacity-0 blur-[140px]" />
       <div className="pointer-events-none fixed -right-40 bottom-0 h-[420px] w-[420px] rounded-full bg-[rgba(212,21,20,0.02)] light:opacity-0 blur-[140px]" />
 
@@ -842,7 +842,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {drawer && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDrawer(false)} />
-          <aside role="dialog" aria-modal="true" aria-label="Navigation" className="rise absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-sb-blue/25 light:border-[#E3E3E3] bg-[var(--sidebar-bg)] light:bg-[#FFFFFF] p-4 backdrop-blur-xl">
+          <aside role="dialog" aria-modal="true" aria-label="Navigation" className="rise absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-r border-sb-blue/25 light:border-[#E3E3E3] bg-[var(--sidebar-bg)] light:bg-[#FFFFFF] p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
             <div className="mb-6 flex items-center justify-between">
               {brand}
               <button type="button" aria-label="Close menu" onClick={() => setDrawer(false)} className="btn-bounce-sm grid h-9 w-9 place-items-center rounded-full border border-[var(--glass-border)] text-sb-muted transition-colors hover:text-sb-text">
@@ -861,7 +861,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       >
         <main
           id="main"
-          className="relative w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-4 sm:pt-5 lg:pt-6 pb-12 sm:pb-16"
+          className="relative w-full px-3 sm:px-6 lg:px-8 xl:px-10 pt-3 sm:pt-5 lg:pt-6 pb-12 sm:pb-16"
         >
           {/* Global Top Utility Row: Mobile Navigation & Floating Controls (Theme Toggle & Notifications) */}
           <div className="relative z-40 flex items-center justify-between gap-3 mb-4 sm:mb-6">

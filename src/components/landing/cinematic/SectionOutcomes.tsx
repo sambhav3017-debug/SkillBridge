@@ -717,14 +717,14 @@ export function SectionOutcomes() {
           {/* Interactive Capabilities Grid */}
           <div className="mt-14 sm:mt-18 lg:mt-20">
             {/* Capability Selector with SkillBridge iOS Glass Sliding System (matching SectionBuild) */}
-            <div className="flex justify-center">
+            <div className="w-full flex justify-center overflow-x-auto scrollbar-none px-2">
               <div
                 ref={capNavRef}
                 onPointerLeave={() => {
                   setHoveredCap(null);
                   moveCapPillTo(selectedCap, false);
                 }}
-                className={`floating-glass-navbar is-top relative mt-8 inline-flex flex-wrap items-center justify-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-2xl transition-all duration-700 delay-150 select-none ${
+                className={`floating-glass-navbar is-top relative mt-8 inline-flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-2xl max-w-full overflow-x-auto scrollbar-none transition-all duration-700 delay-150 select-none ${
                   inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                 }`}
                 role="tablist"
@@ -868,7 +868,7 @@ export function SectionOutcomes() {
             {/* Redesigned Premium "Trusted by Global Innovators and Universities" Section */}
             <div
               id="trusted-ecosystem"
-              className={`mt-14 sm:mt-18 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-[#FAF8F4]/95 dark:bg-[#0D0D10] p-6 sm:p-10 shadow-[0_24px_60px_-20px_rgba(34,34,34,0.08)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)] transition-[opacity,transform] duration-500 delay-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              className={`mt-14 sm:mt-18 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-[#FAF8F4]/95 dark:bg-[#0D0D10] p-4 sm:p-8 lg:p-10 shadow-[0_24px_60px_-20px_rgba(34,34,34,0.08)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)] transition-[opacity,transform] duration-500 delay-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                 inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
               }`}
             >

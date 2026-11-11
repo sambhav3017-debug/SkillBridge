@@ -462,7 +462,7 @@ export function SectionOpportunity() {
     <ScrollSection
       id="opportunity"
       ariaLabel="Four Pathways to Accelerate Forward"
-      className="opportunity-section-wrapper scroll-mt-20 py-24 sm:py-32 lg:py-36 border-b border-[#222222]/[0.06]"
+      className="opportunity-section-wrapper scroll-mt-20 py-20 sm:py-28 lg:py-36 border-b border-[#222222]/[0.06] overflow-hidden relative"
     >
       {({ inView, prefersReduced }) => {
         const activeItem =
@@ -484,7 +484,7 @@ export function SectionOpportunity() {
               className="opportunity-top-color-grade pointer-events-none absolute inset-x-0 top-0 h-36 sm:h-48 lg:h-56"
             />
 
-            <div className="relative mx-auto w-full max-w-[1400px] px-5 sm:px-8 lg:px-12">
+            <div className="relative mx-auto w-full max-w-[1400px] px-4 sm:px-8 lg:px-12">
               {/* Ambient Background Light Cone: strictly controlled by HOVER state */}
               <div
                 aria-hidden="true"
@@ -628,7 +628,7 @@ export function SectionOpportunity() {
                   </div>
 
                   {/* Live Gateway Telemetry Bar */}
-                  <div className="mt-4 sm:mt-0 sm:absolute sm:bottom-3.5 sm:left-5 sm:right-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 dark:border-[rgba(205,203,202,0.12)] bg-white/95 dark:bg-[#0D0D0D] px-4 py-2.5 text-xs backdrop-blur-md transition-colors duration-300 shadow-sm">
+                  <div className="mt-4 sm:mt-0 sm:absolute sm:bottom-3.5 sm:left-5 sm:right-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 dark:border-[rgba(205,203,202,0.12)] bg-white/95 dark:bg-[#0D0D0D] px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs backdrop-blur-md transition-colors duration-300 shadow-sm">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <span className="relative flex h-2 w-2">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 bg-emerald-400" />

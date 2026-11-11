@@ -175,26 +175,41 @@ export default function CinematicBridgeHero3D() {
       return;
     }
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const isMobileDevice = typeof window !== "undefined" && (window.innerWidth < 768 || "ontouchstart" in window);
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // On mobile devices, disable heavy soft shadow computations to ensure 60fps fluidity
+    renderer.shadowMap.enabled = !isMobileDevice;
+    if (!isMobileDevice) {
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
 
     // Scene & Fog
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x080808, 0.038);
 
     // Camera Setup - Perfectly framed matching reference image
+    const initialAspect = container.clientWidth / container.clientHeight;
+    const initialFov = container.clientWidth < 768 ? 46 : 36;
     const camera = new THREE.PerspectiveCamera(
-      36,
-      container.clientWidth / container.clientHeight,
+      initialFov,
+      initialAspect,
       0.1,
       120
     );
-    const startCamPos = new THREE.Vector3(-0.4, 2.4, 9.4);
-    const finalCamPos = new THREE.Vector3(-0.8, 1.75, 8.6);
+    const startCamPos = new THREE.Vector3(
+      container.clientWidth < 768 ? 0.2 : -0.4,
+      container.clientWidth < 768 ? 2.6 : 2.4,
+      container.clientWidth < 768 ? 10.4 : 9.4
+    );
+    const finalCamPos = new THREE.Vector3(
+      container.clientWidth < 768 ? -0.2 : -0.8,
+      container.clientWidth < 768 ? 2.1 : 1.75,
+      container.clientWidth < 768 ? 9.8 : 8.6
+    );
     camera.position.copy(startCamPos);
 
     // Mouse Parallax Damping Variables
@@ -782,12 +797,13 @@ export default function CinematicBridgeHero3D() {
 
     animId = requestAnimationFrame(render);
 
-    // Responsive Resize Handler
+    // Responsive Resize Handler with dynamic portrait/landscape camera framing
     const onResize = () => {
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
       camera.aspect = w / h;
+      camera.fov = w < 768 ? 46 : 36;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };

@@ -44,24 +44,26 @@ export default async function IndustryEntryPage() {
   const loggedIn = !!workspace;
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden overflow-x-hidden">
       <div className="pointer-events-none absolute -left-40 top-0 h-[480px] w-[480px] rounded-full bg-sb-pink/15 blur-[140px]" />
       <div className="pointer-events-none absolute -right-40 top-40 h-[420px] w-[420px] rounded-full bg-sb-blue/20 blur-[140px]" />
 
-      <header className="relative z-10 mx-auto flex max-w-[1300px] items-center justify-between px-5 py-5 sm:px-8">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="SkillBridge home">
-          <Logo size={30} />
-          <span className="flex items-center gap-1.5 text-lg font-bold tracking-tight">
+      <header className="relative z-10 mx-auto flex max-w-[1300px] items-center justify-between gap-2 px-4 py-4 sm:px-8 sm:py-5">
+        <Link href="/" className="flex items-center gap-2 sm:gap-2.5 min-w-0" aria-label="SkillBridge home">
+          <Logo size={28} className="shrink-0" />
+          <span className="flex items-center gap-1.5 text-base sm:text-lg font-bold tracking-tight truncate">
             <SkillBridgeWordmark portal="industry" />{" "}
-            <span className="ml-1 rounded-full border border-sb-pink/40 bg-sb-pink/10 px-2 py-0.5 text-[11px] font-semibold text-sb-pink">
+            <span className="hidden xs:inline-block ml-1 rounded-full border border-sb-pink/40 bg-sb-pink/10 px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold text-sb-pink">
               Industry
             </span>
           </span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <ThemeToggle />
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-sb-muted transition-colors hover:text-sb-text">
-            <ArrowLeft size={16} aria-hidden="true" /> Back to website
+          <Link href="/" className="inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-sb-muted transition-colors hover:text-sb-text">
+            <ArrowLeft size={15} aria-hidden="true" />
+            <span className="hidden sm:inline">Back to website</span>
+            <span className="sm:hidden">Back</span>
           </Link>
         </div>
       </header>

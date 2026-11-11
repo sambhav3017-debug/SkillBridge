@@ -72,7 +72,7 @@ export default function StudentWelcomeBanner({
       id="student-welcome-banner"
       role="region"
       aria-label={fullGreetingText}
-      className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 p-6 sm:p-7 lg:p-8 text-white shadow-sm dark:border-white/10 dark:bg-gradient-to-br dark:from-[#0c1322] dark:via-[#0f172a] dark:to-[#090d16]"
+      className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 p-4 sm:p-7 lg:p-8 text-white shadow-sm dark:border-white/10 dark:bg-gradient-to-br dark:from-[#0c1322] dark:via-[#0f172a] dark:to-[#090d16]"
     >
       {/* Subtle ambient lighting */}
       <div

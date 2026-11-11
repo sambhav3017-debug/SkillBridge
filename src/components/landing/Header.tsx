@@ -80,24 +80,24 @@ export default function Header() {
       className="absolute top-0 left-0 right-0 z-50 w-full pointer-events-none py-3 sm:py-4 select-none"
     >
       <div className="mx-auto max-w-[1400px] px-3 sm:px-6 lg:px-8">
-        <div className="pointer-events-auto relative flex h-[60px] sm:h-[66px] items-center justify-between gap-4">
+        <div className="pointer-events-auto relative flex h-[58px] sm:h-[66px] items-center justify-between gap-2 sm:gap-4">
           {/* Brand Logo & Title with Transparent Background */}
           <Link
             href="/#home"
-            className="group flex items-center gap-3 rounded-xl px-2 py-1.5 outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-sb-cyan hover:opacity-95 active:scale-[0.98] bg-transparent border-0 shadow-none backdrop-blur-none"
+            className="group flex items-center gap-2 sm:gap-3 rounded-xl px-1 sm:px-2 py-1.5 outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-sb-cyan hover:opacity-95 active:scale-[0.98] bg-transparent border-0 shadow-none backdrop-blur-none min-w-0"
             aria-label={t.header.homeAria}
           >
             <div className="t-stagger-loop-icon transition-transform duration-300 group-hover:scale-105 shrink-0 flex items-center">
-              <Logo size={36} />
+              <Logo size={32} />
             </div>
             <SkillBridgeWordmark
-              className="text-[1.28rem] sm:text-[1.38rem]"
+              className="text-[1.12rem] xs:text-[1.24rem] sm:text-[1.38rem] truncate"
               portal="landing"
             />
           </Link>
 
           {/* Action Controls: Apple iOS-inspired Refined Search & Settings */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* Website Settings Button & Anchored Side Popover */}
             <div className="relative">
               <button
@@ -109,15 +109,15 @@ export default function Header() {
                 aria-controls="settings-popover-panel"
                 aria-label={t.header.settings}
                 title={t.header.settingsBtnTitle}
-                className={`group grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full border transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D41514]/60 ${
+                className={`group grid h-8 w-8 sm:h-10 sm:w-10 place-items-center rounded-full border transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D41514]/60 ${
                   activePanel === "settings"
                     ? "bg-black/[0.08] text-slate-900 border-black/[0.18] dark:bg-white/[0.12] dark:text-white dark:border-white/[0.22] dark:ring-1 dark:ring-[#D41514]/50 shadow-xs"
                     : "bg-black/[0.04] hover:bg-black/[0.07] text-slate-700 hover:text-slate-900 border-black/[0.06] dark:bg-white/[0.06] dark:hover:bg-white/[0.09] dark:text-[#CDCBCA] dark:hover:text-white dark:border-white/[0.08]"
                 }`}
               >
                 <Settings
-                  size={17}
-                  className={`transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  size={15}
+                  className={`transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] sm:size-[17px] ${
                     activePanel === "settings" ? "rotate-90 text-slate-900 dark:text-white" : "group-hover:rotate-45"
                   }`}
                 />
@@ -142,15 +142,15 @@ export default function Header() {
                 aria-controls="search-popover-panel"
                 aria-label={t.header.search}
                 title={t.header.searchBtnTitle}
-                className={`group grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full border transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D41514]/60 ${
+                className={`group grid h-8 w-8 sm:h-10 sm:w-10 place-items-center rounded-full border transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D41514]/60 ${
                   activePanel === "search"
                     ? "bg-black/[0.08] text-slate-900 border-black/[0.18] dark:bg-white/[0.12] dark:text-white dark:border-white/[0.22] dark:ring-1 dark:ring-[#D41514]/50 shadow-xs"
                     : "bg-black/[0.04] hover:bg-black/[0.07] text-slate-700 hover:text-slate-900 border-black/[0.06] dark:bg-white/[0.06] dark:hover:bg-white/[0.09] dark:text-[#CDCBCA] dark:hover:text-white dark:border-white/[0.08]"
                 }`}
               >
                 <Search
-                  size={17}
-                  className="transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-105"
+                  size={15}
+                  className="transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-105 sm:size-[17px]"
                 />
               </button>
 
@@ -169,13 +169,13 @@ export default function Header() {
 
             <button
               type="button"
-              className="grid h-10 w-10 place-items-center rounded-full text-[#202536] dark:text-slate-100 bg-white/70 dark:bg-[#070b14]/70 border border-slate-200/80 dark:border-white/15 shadow-[0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-200 hover:scale-105 hover:bg-white/90 dark:hover:bg-white/[0.14] hover:border-sb-cyan/50 active:scale-95 focus-visible:ring-2 focus-visible:ring-sb-cyan lg:hidden"
+              className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full text-[#202536] dark:text-slate-100 bg-white/70 dark:bg-[#070b14]/70 border border-slate-200/80 dark:border-white/15 shadow-[0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-200 hover:scale-105 hover:bg-white/90 dark:hover:bg-white/[0.14] hover:border-sb-cyan/50 active:scale-95 focus-visible:ring-2 focus-visible:ring-sb-cyan lg:hidden"
               aria-expanded={open}
               aria-controls="mobile-menu"
               aria-label={open ? "Close menu" : "Open menu"}
               onClick={() => setOpen((v) => !v)}
             >
-              {open ? <X size={19} /> : <Menu size={19} />}
+              {open ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
         </div>
@@ -194,7 +194,7 @@ export default function Header() {
             <nav
               id="mobile-menu"
               aria-label="Mobile Navigation"
-              className="absolute inset-x-3 top-3 max-h-[calc(100vh-24px)] overflow-y-auto rounded-3xl border border-white/20 dark:border-white/12 bg-white/95 dark:bg-[#0c101d]/95 p-5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-2xl transition-all duration-300 dark:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.7)]"
+              className="absolute inset-x-3 top-3 max-h-[calc(100dvh-24px)] overscroll-contain overflow-y-auto rounded-3xl border border-white/20 dark:border-white/12 bg-white/95 dark:bg-[#0c101d]/95 p-4 sm:p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-2xl transition-all duration-300 dark:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.7)]"
             >
               {/* Header inside Drawer */}
               <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/10">

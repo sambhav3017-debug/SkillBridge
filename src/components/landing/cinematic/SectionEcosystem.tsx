@@ -388,7 +388,7 @@ export function SectionEcosystem() {
     <ScrollSection
       id="ecosystem"
       ariaLabel="Three Words, One Unified Network"
-      className="py-20 md:py-28 px-6 border-b border-[#222222]/[0.06] relative overflow-hidden"
+      className="py-18 sm:py-24 md:py-28 px-4 sm:px-6 border-b border-[#222222]/[0.06] relative overflow-hidden"
     >
       {({ inView: isVisible }) => (
         <>
@@ -399,7 +399,7 @@ export function SectionEcosystem() {
           {/* Left Column: Student Ambient Grading */}
           <div
             aria-hidden="true"
-            className={`pointer-events-none absolute left-[8%] sm:left-[14%] top-1/2 -translate-y-1/2 h-[500px] w-[380px] rounded-full blur-[130px] transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`pointer-events-none absolute left-[4%] sm:left-[14%] top-1/2 -translate-y-1/2 h-[320px] sm:h-[500px] w-[220px] sm:w-[380px] max-w-full rounded-full blur-[70px] sm:blur-[130px] transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
               hoveredPillar === "students"
                 ? "opacity-35 dark:opacity-40"
                 : "opacity-16 dark:opacity-20"
@@ -412,7 +412,7 @@ export function SectionEcosystem() {
           {/* Center Column: Academia Ambient Grading */}
           <div
             aria-hidden="true"
-            className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-[500px] w-[380px] rounded-full blur-[130px] transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-[320px] sm:h-[500px] w-[220px] sm:w-[380px] max-w-full rounded-full blur-[70px] sm:blur-[130px] transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
               hoveredPillar === "academia"
                 ? "opacity-35 dark:opacity-40"
                 : "opacity-16 dark:opacity-20"
@@ -425,7 +425,7 @@ export function SectionEcosystem() {
           {/* Right Column: Industry Ambient Grading */}
           <div
             aria-hidden="true"
-            className={`pointer-events-none absolute right-[8%] sm:right-[14%] top-1/2 -translate-y-1/2 h-[500px] w-[380px] rounded-full blur-[130px] transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`pointer-events-none absolute right-[4%] sm:right-[14%] top-1/2 -translate-y-1/2 h-[320px] sm:h-[500px] w-[220px] sm:w-[380px] max-w-full rounded-full blur-[70px] sm:blur-[130px] transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
               hoveredPillar === "industry"
                 ? "opacity-35 dark:opacity-40"
                 : "opacity-16 dark:opacity-20"

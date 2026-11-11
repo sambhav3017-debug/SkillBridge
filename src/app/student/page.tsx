@@ -18,7 +18,7 @@ export default async function StudentLandingPage() {
   const isLoggedIn = !!student;
 
   return (
-    <div className="relative min-h-screen bg-[var(--color-bg)] light:bg-[#F8F6F2] transition-colors duration-300 selection:bg-sb-cyan/20 selection:text-sb-cyan">
+    <div className="relative min-h-screen overflow-x-hidden bg-[var(--color-bg)] light:bg-[#F8F6F2] transition-colors duration-300 selection:bg-sb-cyan/20 selection:text-sb-cyan">
       {/* Top Floating Glass Navigation Header with Fluid Sliding Glass Indicator */}
       <Header />
 
