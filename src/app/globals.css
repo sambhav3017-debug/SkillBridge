@@ -3405,12 +3405,19 @@ input[type="search"]::-webkit-search-results-decoration {
   inset: 0;
   pointer-events: none;
   background: linear-gradient(
-    90deg,
-    rgba(244, 248, 253, 0.90) 0%,
-    rgba(244, 248, 253, 0.68) 26%,
-    rgba(244, 248, 253, 0.16) 44%,
-    transparent 58%
-  );
+      90deg,
+      rgba(242, 239, 233, 0.88) 0%,
+      rgba(242, 239, 233, 0.62) 24%,
+      rgba(235, 240, 246, 0.12) 39%,
+      transparent 48%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(242, 239, 233, 0.12) 0%,
+      transparent 16%,
+      transparent 82%,
+      rgba(218, 226, 236, 0.65) 100%
+    );
 }
 
 [data-theme="dark"] .hero-grade,
@@ -3420,7 +3427,7 @@ input[type="search"]::-webkit-search-results-decoration {
       rgba(8, 8, 8, 0.92) 0%,
       rgba(8, 8, 8, 0.68) 26%,
       rgba(8, 8, 8, 0.16) 44%,
-      transparent 58%
+      transparent 54%
     ),
     linear-gradient(
       180deg,
@@ -3435,10 +3442,10 @@ input[type="search"]::-webkit-search-results-decoration {
   .hero-grade {
     background: linear-gradient(
       180deg,
-      rgba(244, 248, 253, 0.92) 0%,
-      rgba(244, 248, 253, 0.72) 32%,
-      rgba(244, 248, 253, 0.12) 48%,
-      transparent 62%
+      rgba(242, 239, 233, 0.90) 0%,
+      rgba(242, 239, 233, 0.68) 30%,
+      rgba(235, 240, 246, 0.10) 45%,
+      transparent 58%
     );
   }
 
