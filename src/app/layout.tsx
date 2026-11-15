@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Inter, Outfit, Newsreader, JetBrains_Mono } from "ne
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import SpatialPortalFrame from "@/components/motion/SpatialPortalFrame";
+import OfflineBanner from "@/components/ui/OfflineBanner";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -108,6 +109,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <LanguageProvider>
           <ThemeProvider>
             <SpatialPortalFrame>{children}</SpatialPortalFrame>
+            <OfflineBanner />
           </ThemeProvider>
         </LanguageProvider>
       </body>

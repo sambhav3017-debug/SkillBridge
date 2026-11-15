@@ -266,7 +266,7 @@ export default function Header() {
                 </span>
                 <div className="space-y-1">
                   <Link
-                    href="/student/dashboard"
+                    href="/student"
                     onClick={() => setOpen(false)}
                     className="flex min-h-[44px] items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.08] text-slate-800 dark:text-slate-100 transition-colors"
                   >
@@ -285,7 +285,7 @@ export default function Header() {
                   </Link>
 
                   <Link
-                    href="/academia/dashboard"
+                    href="/academia"
                     onClick={() => setOpen(false)}
                     className="flex min-h-[44px] items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.08] text-slate-800 dark:text-slate-100 transition-colors"
                   >
@@ -304,7 +304,7 @@ export default function Header() {
                   </Link>
 
                   <Link
-                    href="/industry/dashboard"
+                    href="/industry"
                     onClick={() => setOpen(false)}
                     className="flex min-h-[44px] items-center justify-between px-3.5 py-2.5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.08] text-slate-800 dark:text-slate-100 transition-colors"
                   >

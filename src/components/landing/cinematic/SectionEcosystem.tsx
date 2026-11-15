@@ -43,7 +43,7 @@ export const PILLARS: PillarData[] = [
     id: "students",
     title: "Students",
     tagline: "Build Verified Portfolios & Launch Careers",
-    href: "/students",
+    href: "/student",
     primaryHex: "#007BA7",
     secondaryHex: "#19B8E6",
     ambientGlowHex: "#19B8E6",
