@@ -3406,10 +3406,10 @@ input[type="search"]::-webkit-search-results-decoration {
   pointer-events: none;
   background: linear-gradient(
     90deg,
-    rgba(248, 246, 242, 0.88) 0%,
-    rgba(248, 246, 242, 0.62) 28%,
-    rgba(248, 246, 242, 0.2) 48%,
-    transparent 64%
+    rgba(244, 248, 253, 0.90) 0%,
+    rgba(244, 248, 253, 0.68) 26%,
+    rgba(244, 248, 253, 0.16) 44%,
+    transparent 58%
   );
 }
 
@@ -3417,18 +3417,42 @@ input[type="search"]::-webkit-search-results-decoration {
 .dark .hero-grade {
   background: linear-gradient(
       90deg,
-      rgba(8, 8, 8, 0.94) 0%,
-      rgba(8, 8, 8, 0.70) 28%,
-      rgba(8, 8, 8, 0.20) 48%,
-      transparent 66%
+      rgba(8, 8, 8, 0.92) 0%,
+      rgba(8, 8, 8, 0.68) 26%,
+      rgba(8, 8, 8, 0.16) 44%,
+      transparent 58%
     ),
     linear-gradient(
       180deg,
-      rgba(8, 8, 8, 0.20) 0%,
-      transparent 22%,
-      rgba(8, 8, 8, 0.40) 75%,
+      rgba(8, 8, 8, 0.18) 0%,
+      transparent 20%,
+      transparent 78%,
+      rgba(8, 8, 8, 0.82) 100%
+    );
+}
+
+@media (max-width: 767px) {
+  .hero-grade {
+    background: linear-gradient(
+      180deg,
+      rgba(244, 248, 253, 0.92) 0%,
+      rgba(244, 248, 253, 0.72) 32%,
+      rgba(244, 248, 253, 0.12) 48%,
+      transparent 62%
+    );
+  }
+
+  [data-theme="dark"] .hero-grade,
+  .dark .hero-grade {
+    background: linear-gradient(
+      180deg,
+      rgba(8, 8, 8, 0.92) 0%,
+      rgba(8, 8, 8, 0.72) 32%,
+      rgba(8, 8, 8, 0.12) 48%,
+      transparent 68%,
       rgba(8, 8, 8, 0.85) 100%
     );
+  }
 }
 
 /* Floating SkillBridge Brand Badge in Gap */

@@ -2,157 +2,1361 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 /**
- * SkillBridge — Cinematic Interactive 3D Hero Experience
+ * SkillBridge — Complete Cinematic 3D Hero Redesign
+ * Concept: "The Hand That Becomes Your Bridge"
  * ---------------------------------------------------------------------------
- * Recreates the monumental architectural bridge, descending opportunity gateway,
- * 3 realistic students, and futuristic city horizon in real-time WebGL via Three.js.
- *
- * Choreographed 6-Stage Timeline:
- *  - Scene 1: Deep black cinematic environment awakens with atmospheric rim lighting.
- *  - Scene 2: Architectural bridge foundation and curved catenary deck assemble dynamically.
- *  - Scene 3: Monolithic gateway descends with physical gravity, settles with micro-impact,
- *             and ignites its Laser Crimson inner neon contour.
- *  - Scene 4: Three students with natural walking kinematics arrive along the bridge deck.
- *  - Scene 5: Gateway interior illuminates, revealing the modern city skyline as students cross.
- *  - Scene 6: Camera settles into final balanced hero composition with mouse parallax.
+ * Real-time 3D WebGL experience built with Three.js:
+ *  - World A (Where You Begin — Left): Realistic university architectural
+ *    environment with limestone ashlar masonry, arched library windows,
+ *    classical colonnade portico, stone balustrade, campus greenery, and
+ *    multi-strata rock cliff overlooking a deep misty chasm.
+ *  - World B (Where You Can Go — Right): Modern glass architecture, curtain-wall
+ *    innovation skyscrapers, curved glass rotunda atrium, elevated skybridges,
+ *    and cantilevered titanium arrival plaza.
+ *  - The Giant Futuristic Robotic Hand: Aerospace-grade brushed titanium and
+ *    chrome articulated forearm, hydraulic actuators, rotary wrist, sculpted
+ *    palm with flush energy core, 4 multi-phalangeal articulated fingers, and
+ *    2-segment thumb that rises from the abyss and transforms into a stable,
+ *    illuminated walkable bridge.
+ *  - Realistic Student Character: Natural human proportions and contemporary
+ *    student attire with distance-locked kinematic walking gait.
+ *  - 6-Phase Choreographed Sequence + Ambient Idle State + Dual Theme Support.
  */
 
-// Timeline constants (seconds)
-const T_ENV_END = 1.2;
-const T_BRIDGE_START = 1.0;
-const T_BRIDGE_END = 4.0;
-const T_GATEWAY_START = 3.6;
-const T_GATEWAY_LAND = 6.2;
-const T_GATEWAY_GLOW = 7.0;
-const T_STUDENTS_START = 6.5;
-const T_STUDENTS_CROSS = 12.0;
-const T_FINAL_HERO = 13.0;
+// ---------------------------------------------------------------------------
+// TIMELINE CONSTANTS (Seconds) — 6 Choreographed Phases
+// ---------------------------------------------------------------------------
+const T_PHASE1_END = 1.8; // Phase 1: The Gap (Student walks to World A edge)
+const T_PHASE2_END = 4.4; // Phase 2: Emergence (Giant robotic hand rises from below)
+const T_PHASE3_END = 6.8; // Phase 3: Transformation (Wrist levels, fingers uncurl & lock to World B)
+const T_PHASE4_END = 8.0; // Phase 4: Connection (Integrated pathway illuminates progressively)
+const T_PHASE5_END = 13.0; // Phase 5: The Crossing (Student walks across the hand-bridge to World B)
+const T_PHASE6_READY = 14.2; // Phase 6: Possibility (World B illuminates, transitions to ambient idle)
 
-function easeOutCubic(t: number): number {
-  return 1 - Math.pow(1 - t, 3);
+// World X Coordinates (Positioned so left Hero text never overlaps the student or hand)
+const WORLD_A_START_X = 0.05;
+const WORLD_A_EDGE_X = 0.72;
+const BRIDGE_START_X = 0.88; // Forearm/wrist ramp docks at World A ledge
+const WRIST_PIVOT_X = 1.28;
+const KNUCKLE_X = 2.58;
+const BRIDGE_END_X = 3.82; // Fingertips lock onto World B plaza
+const WORLD_B_DEST_X = 4.28;
+
+const WORLD_A_Y = 0.0;
+const WORLD_B_Y = 0.14;
+const BRIDGE_SLOPE = Math.atan2(WORLD_B_Y - WORLD_A_Y, BRIDGE_END_X - BRIDGE_START_X);
+
+// Math Helpers
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const smoothstep = (t: number) => {
+  const x = clamp01(t);
+  return x * x * (3 - 2 * x);
+};
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - clamp01(t), 3);
+const easeInOutCubic = (t: number) => {
+  const x = clamp01(t);
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+};
+
+/** Trapezoidal velocity profile returning [normalizedPosition 0..1, normalizedSpeed 0..1] */
+function trapezoidalMotion(u: number, accelFraction = 0.2): [number, number] {
+  const x = clamp01(u);
+  const vmax = 1 / (1 - accelFraction);
+  if (x < accelFraction) {
+    return [(0.5 * vmax * x * x) / accelFraction, x / accelFraction];
+  }
+  if (x > 1 - accelFraction) {
+    const r = 1 - x;
+    return [1 - (0.5 * vmax * r * r) / accelFraction, r / accelFraction];
+  }
+  return [0.5 * vmax * accelFraction + vmax * (x - accelFraction), 1];
 }
 
-function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+/** Walkable surface elevation Y at any world X coordinate */
+function getWalkSurfaceY(x: number, bridgeDip = 0): number {
+  if (x <= BRIDGE_START_X) return WORLD_A_Y;
+  if (x >= BRIDGE_END_X) return WORLD_B_Y;
+  const u = (x - BRIDGE_START_X) / (BRIDGE_END_X - BRIDGE_START_X);
+  const baseLineY = lerp(WORLD_A_Y, WORLD_B_Y, u);
+  const palmArch = Math.sin(u * Math.PI) * 0.035;
+  return baseLineY + palmArch - bridgeDip * Math.sin(u * Math.PI);
 }
 
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
+// ---------------------------------------------------------------------------
+// PROCEDURAL ARCHITECTURAL TEXTURE GENERATORS
+// ---------------------------------------------------------------------------
+function createUniversityStoneTexture(isLight: boolean): THREE.CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = 256;
+  c.height = 256;
+  const ctx = c.getContext("2d");
+  if (ctx) {
+    ctx.fillStyle = isLight ? "#ded8ce" : "#2d2a28";
+    ctx.fillRect(0, 0, 256, 256);
+
+    // Subtle ashlar stone course lines
+    ctx.strokeStyle = isLight ? "rgba(120,110,98,0.28)" : "rgba(15,14,13,0.55)";
+    ctx.lineWidth = 2;
+    for (let y = 0; y < 256; y += 32) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(256, y);
+      ctx.stroke();
+
+      const offset = (y / 32) % 2 === 0 ? 0 : 32;
+      for (let x = offset; x < 256; x += 64) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + 32);
+        ctx.stroke();
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 2);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
-// Student bone hierarchy builder for realistic silhouette proportions
-interface StudentRig {
+function createCurtainWallTexture(): {
+  map: THREE.CanvasTexture;
+  emissiveMap: THREE.CanvasTexture;
+} {
+  const cMap = document.createElement("canvas");
+  cMap.width = 256;
+  cMap.height = 512;
+  const ctx = cMap.getContext("2d");
+
+  const cEmissive = document.createElement("canvas");
+  cEmissive.width = 256;
+  cEmissive.height = 512;
+  const eCtx = cEmissive.getContext("2d");
+
+  if (ctx && eCtx) {
+    // Deep architectural glass base
+    ctx.fillStyle = "#162235";
+    ctx.fillRect(0, 0, 256, 512);
+
+    eCtx.fillStyle = "#000000";
+    eCtx.fillRect(0, 0, 256, 512);
+
+    // Curtain-wall floor plates & illuminated office bays
+    for (let y = 12; y < 500; y += 16) {
+      // Metallic horizontal spandrel beam
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(0, y - 3, 256, 2);
+
+      for (let x = 8; x < 248; x += 20) {
+        const seed = (x * 19 + y * 37) % 17;
+        if (seed > 5) {
+          const isWarm = seed % 4 === 0;
+          ctx.fillStyle = isWarm ? "#e2e8f0" : "#bae6fd";
+          ctx.fillRect(x, y, 14, 9);
+
+          eCtx.fillStyle = isWarm ? "#f8fafc" : "#7dd3fc";
+          eCtx.fillRect(x, y, 14, 9);
+        } else {
+          ctx.fillStyle = "#1e293b";
+          ctx.fillRect(x, y, 14, 9);
+        }
+      }
+    }
+
+    // Vertical aluminum mullions
+    ctx.fillStyle = "#475569";
+    for (let x = 4; x < 256; x += 20) {
+      ctx.fillRect(x, 0, 2, 512);
+    }
+  }
+
+  const map = new THREE.CanvasTexture(cMap);
+  map.colorSpace = THREE.SRGBColorSpace;
+  const emissiveMap = new THREE.CanvasTexture(cEmissive);
+  emissiveMap.colorSpace = THREE.SRGBColorSpace;
+  return { map, emissiveMap };
+}
+
+// ---------------------------------------------------------------------------
+// REALISTIC ARTICULATED STUDENT CHARACTER RIG
+// ---------------------------------------------------------------------------
+const L_THIGH = 0.23;
+const L_SHIN = 0.22;
+const FOOT_H = 0.038;
+const CHAR_SCALE = 0.82;
+const STRIDE_LEN = 0.62 * CHAR_SCALE;
+
+interface StudentLimb {
+  thigh: THREE.Group;
+  shin: THREE.Group;
+  foot: THREE.Group;
+}
+
+interface StudentArm {
+  upper: THREE.Group;
+  fore: THREE.Group;
+}
+
+interface RealisticStudentRig {
   root: THREE.Group;
-  leftLeg: THREE.Group;
-  rightLeg: THREE.Group;
-  leftArm: THREE.Group;
-  rightArm: THREE.Group;
-  torso: THREE.Group;
-  speed: number;
-  offsetT: number;
+  hips: THREE.Group;
+  spine: THREE.Group;
+  head: THREE.Group;
+  legs: [StudentLimb, StudentLimb];
+  arms: [StudentArm, StudentArm];
+  jacketMat: THREE.MeshStandardMaterial;
+  pantsMat: THREE.MeshStandardMaterial;
+  packMat: THREE.MeshStandardMaterial;
 }
 
-function createStudentRig(scale = 1.0): StudentRig {
+function buildRealisticStudentRig(): RealisticStudentRig {
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xe0b18c, roughness: 0.55, metalness: 0.05 });
+  const hairMat = new THREE.MeshStandardMaterial({ color: 0x1c1613, roughness: 0.7, metalness: 0.05 });
+  const jacketMat = new THREE.MeshStandardMaterial({ color: 0x2b3954, roughness: 0.62, metalness: 0.15 });
+  const hoodieTrimMat = new THREE.MeshStandardMaterial({ color: 0x1e2738, roughness: 0.7, metalness: 0.1 });
+  const shirtMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.48, metalness: 0.05 });
+  const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e2430, roughness: 0.75, metalness: 0.1 });
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.38, metalness: 0.1 });
+  const soleMat = new THREE.MeshStandardMaterial({ color: 0xd41514, roughness: 0.5, metalness: 0.2 });
+  const packMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6, metalness: 0.2 });
+  const accentMat = new THREE.MeshStandardMaterial({
+    color: 0xd41514,
+    emissive: 0xd41514,
+    emissiveIntensity: 0.5,
+    roughness: 0.25,
+  });
+
+  const makeSegment = (len: number, rTop: number, rBot: number, mat: THREE.Material) => {
+    const grp = new THREE.Group();
+    const cylGeo = new THREE.CylinderGeometry(rTop, rBot, len, 14, 1);
+    cylGeo.translate(0, -len / 2, 0);
+    const cyl = new THREE.Mesh(cylGeo, mat);
+    cyl.castShadow = true;
+    grp.add(cyl);
+
+    const jointTop = new THREE.Mesh(new THREE.SphereGeometry(rTop, 12, 10), mat);
+    grp.add(jointTop);
+
+    const jointBot = new THREE.Mesh(new THREE.SphereGeometry(rBot, 12, 10), mat);
+    jointBot.position.y = -len;
+    grp.add(jointBot);
+    return grp;
+  };
+
   const root = new THREE.Group();
+  const hips = new THREE.Group();
+  hips.position.y = L_THIGH + L_SHIN + FOOT_H;
+  root.add(hips);
 
-  const matChar = new THREE.MeshStandardMaterial({
-    color: 0x18181b,
-    roughness: 0.6,
-    metalness: 0.3,
-  });
+  const pelvis = new THREE.Mesh(new THREE.SphereGeometry(0.062, 14, 12), pantsMat);
+  pelvis.scale.set(1.3, 0.85, 0.92);
+  pelvis.castShadow = true;
+  hips.add(pelvis);
 
-  const matCloth = new THREE.MeshStandardMaterial({
-    color: 0x27272a,
-    roughness: 0.7,
-    metalness: 0.2,
-  });
+  const legs = [1, -1].map((side) => {
+    const thigh = new THREE.Group();
+    thigh.position.set(side * 0.046, -0.01, 0);
+    thigh.add(makeSegment(L_THIGH, 0.042, 0.033, pantsMat));
 
-  // Torso / Jacket
-  const torso = new THREE.Group();
-  const torsoMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(0.32 * scale, 0.48 * scale, 0.18 * scale),
-    matCloth
-  );
-  torsoMesh.position.y = 0.95 * scale;
+    const shin = new THREE.Group();
+    shin.position.y = -L_THIGH;
+    shin.add(makeSegment(L_SHIN, 0.033, 0.026, pantsMat));
+    thigh.add(shin);
+
+    const foot = new THREE.Group();
+    foot.position.y = -L_SHIN;
+
+    const shoeUpper = new THREE.Mesh(new THREE.BoxGeometry(0.054, 0.032, 0.115), shoeMat);
+    shoeUpper.position.set(0, -FOOT_H + 0.019, 0.028);
+    shoeUpper.castShadow = true;
+    foot.add(shoeUpper);
+
+    const shoeToe = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 10), shoeMat);
+    shoeToe.scale.set(1, 0.6, 1.05);
+    shoeToe.position.set(0, -FOOT_H + 0.016, 0.084);
+    foot.add(shoeToe);
+
+    const shoeSole = new THREE.Mesh(new THREE.BoxGeometry(0.058, 0.009, 0.126), soleMat);
+    shoeSole.position.set(0, -FOOT_H + 0.004, 0.032);
+    foot.add(shoeSole);
+
+    shin.add(foot);
+    hips.add(thigh);
+    return { thigh, shin, foot };
+  }) as [StudentLimb, StudentLimb];
+
+  const spine = new THREE.Group();
+  spine.position.y = 0.02;
+  hips.add(spine);
+
+  const torsoMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.068, 0.16, 8, 16), jacketMat);
+  torsoMesh.scale.set(1.32, 1, 0.8);
+  torsoMesh.position.y = 0.15;
   torsoMesh.castShadow = true;
-  torso.add(torsoMesh);
+  spine.add(torsoMesh);
 
-  // Backpack
-  const packMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(0.24 * scale, 0.36 * scale, 0.14 * scale),
-    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 })
+  const collar = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.08, 0.016), shirtMat);
+  collar.position.set(0, 0.24, 0.052);
+  collar.rotation.x = -0.1;
+  spine.add(collar);
+
+  const hood = new THREE.Mesh(new THREE.SphereGeometry(0.058, 14, 10), hoodieTrimMat);
+  hood.scale.set(1.32, 0.68, 0.95);
+  hood.position.set(0, 0.27, -0.038);
+  spine.add(hood);
+
+  const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.145, 0.21, 0.082), packMat);
+  backpack.position.set(0, 0.165, -0.086);
+  backpack.castShadow = true;
+  spine.add(backpack);
+
+  const packTop = new THREE.Mesh(new THREE.CylinderGeometry(0.041, 0.041, 0.145, 12), packMat);
+  packTop.rotation.z = Math.PI / 2;
+  packTop.position.set(0, 0.27, -0.086);
+  spine.add(packTop);
+
+  const packBadge = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.014, 0.01), accentMat);
+  packBadge.position.set(0, 0.21, -0.128);
+  spine.add(packBadge);
+
+  for (const side of [1, -1]) {
+    const strap = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.17, 0.012), packMat);
+    strap.position.set(side * 0.048, 0.18, 0.053);
+    strap.rotation.x = -0.08;
+    spine.add(strap);
+  }
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.023, 0.026, 0.048, 12), skinMat);
+  neck.position.y = 0.3;
+  spine.add(neck);
+
+  const head = new THREE.Group();
+  head.position.y = 0.33;
+  spine.add(head);
+
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.062, 20, 16), skinMat);
+  skull.scale.set(0.92, 1.08, 0.98);
+  skull.position.y = 0.06;
+  skull.castShadow = true;
+  head.add(skull);
+
+  const hairCap = new THREE.Mesh(
+    new THREE.SphereGeometry(0.067, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.58),
+    hairMat
   );
-  packMesh.position.set(0, 0.98 * scale, -0.14 * scale);
-  torso.add(packMesh);
+  hairCap.scale.set(0.94, 1.06, 1.03);
+  hairCap.position.set(0, 0.068, -0.005);
+  hairCap.rotation.x = -0.28;
+  head.add(hairCap);
 
-  // Head
-  const headMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.11 * scale, 16, 16),
-    matChar
-  );
-  headMesh.position.y = 1.32 * scale;
-  torso.add(headMesh);
+  const arms = [1, -1].map((side) => {
+    const upper = new THREE.Group();
+    upper.position.set(side * 0.096, 0.265, 0);
+    upper.add(makeSegment(0.155, 0.029, 0.024, jacketMat));
 
-  // Legs (Hips -> Knees -> Feet)
-  const legGeo = new THREE.BoxGeometry(0.1 * scale, 0.4 * scale, 0.1 * scale);
-  const footGeo = new THREE.BoxGeometry(0.1 * scale, 0.08 * scale, 0.2 * scale);
+    const fore = new THREE.Group();
+    fore.position.y = -0.155;
+    fore.add(makeSegment(0.14, 0.024, 0.02, jacketMat));
 
-  const leftLeg = new THREE.Group();
-  leftLeg.position.set(-0.1 * scale, 0.72 * scale, 0);
-  const leftLegMesh = new THREE.Mesh(legGeo, matChar);
-  leftLegMesh.position.y = -0.2 * scale;
-  const leftFootMesh = new THREE.Mesh(footGeo, matChar);
-  leftFootMesh.position.set(0, -0.42 * scale, 0.05 * scale);
-  leftLeg.add(leftLegMesh, leftFootMesh);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 10), skinMat);
+    hand.scale.set(0.8, 1.15, 0.9);
+    hand.position.y = -0.16;
+    fore.add(hand);
 
-  const rightLeg = new THREE.Group();
-  rightLeg.position.set(0.1 * scale, 0.72 * scale, 0);
-  const rightLegMesh = new THREE.Mesh(legGeo, matChar);
-  rightLegMesh.position.y = -0.2 * scale;
-  const rightFootMesh = new THREE.Mesh(footGeo, matChar);
-  rightFootMesh.position.set(0, -0.42 * scale, 0.05 * scale);
-  rightLeg.add(rightLegMesh, rightFootMesh);
+    upper.add(fore);
+    spine.add(upper);
+    return { upper, fore };
+  }) as [StudentArm, StudentArm];
 
-  // Arms
-  const armGeo = new THREE.BoxGeometry(0.08 * scale, 0.42 * scale, 0.08 * scale);
-  const leftArm = new THREE.Group();
-  leftArm.position.set(-0.21 * scale, 1.15 * scale, 0);
-  const leftArmMesh = new THREE.Mesh(armGeo, matCloth);
-  leftArmMesh.position.y = -0.2 * scale;
-  leftArm.add(leftArmMesh);
-
-  const rightArm = new THREE.Group();
-  rightArm.position.set(0.21 * scale, 1.15 * scale, 0);
-  const rightArmMesh = new THREE.Mesh(armGeo, matCloth);
-  rightArmMesh.position.y = -0.2 * scale;
-  rightArm.add(rightArmMesh);
-
-  root.add(torso, leftLeg, rightLeg, leftArm, rightArm);
+  root.scale.setScalar(CHAR_SCALE);
+  root.rotation.y = Math.PI / 2;
 
   return {
     root,
-    leftLeg,
-    rightLeg,
-    leftArm,
-    rightArm,
-    torso,
-    speed: 1.0,
-    offsetT: 0,
+    hips,
+    spine,
+    head,
+    legs,
+    arms,
+    jacketMat,
+    pantsMat,
+    packMat,
   };
 }
+
+interface StudentPoseState {
+  x: number;
+  z: number;
+  stridePhase: number;
+  strideAmp: number;
+  lean: number;
+  lookPitch: number;
+  lookYaw: number;
+  facingYaw: number;
+  bridgeDip: number;
+}
+
+function applyStudentPose(rig: RealisticStudentRig, p: StudentPoseState) {
+  const groundY = getWalkSurfaceY(p.x, p.bridgeDip);
+  rig.root.position.set(p.x, groundY, p.z);
+  rig.root.rotation.y = p.facingYaw;
+
+  const thighAmp = 0.44 * p.strideAmp;
+  const kneeAmp = 0.8 * p.strideAmp;
+  let solvedHipHeight = 0;
+
+  for (let i = 0; i < 2; i++) {
+    const ph = p.stridePhase + (i === 0 ? 0 : Math.PI);
+    const s = Math.sin(ph);
+    const c = Math.cos(ph);
+    const thighAngle = thighAmp * s;
+    const kneeFlex = 0.04 * p.strideAmp + kneeAmp * Math.pow(Math.max(0, c), 1.3);
+
+    const leg = rig.legs[i];
+    leg.thigh.rotation.x = -thighAngle;
+    leg.shin.rotation.x = kneeFlex;
+    leg.foot.rotation.x = thighAngle - kneeFlex;
+
+    const legVerticalSpan =
+      L_THIGH * Math.cos(thighAngle) + L_SHIN * Math.cos(thighAngle - kneeFlex) + FOOT_H;
+    if (legVerticalSpan > solvedHipHeight) {
+      solvedHipHeight = legVerticalSpan;
+    }
+  }
+
+  rig.hips.position.y = solvedHipHeight;
+  rig.hips.rotation.y = -0.06 * p.strideAmp * Math.sin(p.stridePhase);
+
+  rig.spine.rotation.x = p.lean;
+  rig.spine.rotation.y = 0.1 * p.strideAmp * Math.sin(p.stridePhase);
+
+  const armAmp = 0.38 * p.strideAmp;
+  for (let i = 0; i < 2; i++) {
+    const arm = rig.arms[i];
+    const swing = (i === 0 ? -1 : 1) * armAmp * Math.sin(p.stridePhase);
+    arm.upper.rotation.x = -swing;
+    arm.upper.rotation.z = (i === 0 ? 1 : -1) * 0.075;
+    arm.fore.rotation.x = -(0.18 + 0.3 * Math.max(0, swing) + 0.08 * p.strideAmp);
+  }
+
+  rig.head.rotation.x = p.lookPitch - 0.5 * p.lean;
+  rig.head.rotation.y = p.lookYaw;
+}
+
+// ---------------------------------------------------------------------------
+// GIANT FUTURISTIC ROBOTIC HAND BRIDGE RIG
+// ---------------------------------------------------------------------------
+interface RoboticHandRig {
+  root: THREE.Group;
+  wristGroup: THREE.Group;
+  fingers: THREE.Group[][]; // 4 fingers x 3 phalanges
+  thumbJoints: [THREE.Group, THREE.Group];
+  pathwayMats: THREE.MeshStandardMaterial[];
+  deckChannelMat: THREE.MeshPhysicalMaterial;
+  shellMat: THREE.MeshPhysicalMaterial;
+  subFrameMat: THREE.MeshStandardMaterial;
+  chromeMat: THREE.MeshPhysicalMaterial;
+  seamLightMat: THREE.MeshStandardMaterial;
+  palmCoreRingMat: THREE.MeshStandardMaterial;
+  palmCoreCenterMat: THREE.MeshBasicMaterial;
+  handLight: THREE.PointLight;
+}
+
+function buildRoboticHandBridge(): RoboticHandRig {
+  const shellMat = new THREE.MeshPhysicalMaterial({
+    color: 0xd4d8e0,
+    metalness: 0.88,
+    roughness: 0.19,
+    clearcoat: 0.92,
+    clearcoatRoughness: 0.12,
+  });
+
+  const subFrameMat = new THREE.MeshStandardMaterial({
+    color: 0x1c212b,
+    metalness: 0.85,
+    roughness: 0.3,
+  });
+
+  const chromeMat = new THREE.MeshPhysicalMaterial({
+    color: 0xf8fafc,
+    metalness: 0.97,
+    roughness: 0.07,
+    clearcoat: 1.0,
+  });
+
+  // Recessed smoked-titanium walkway deck surface
+  const deckChannelMat = new THREE.MeshPhysicalMaterial({
+    color: 0x181c26,
+    metalness: 0.65,
+    roughness: 0.25,
+    clearcoat: 0.8,
+  });
+
+  const seamLightMat = new THREE.MeshStandardMaterial({
+    color: 0x334155,
+    emissive: 0xd41514,
+    emissiveIntensity: 0.15,
+    roughness: 0.2,
+    metalness: 0.6,
+  });
+
+  const palmCoreRingMat = new THREE.MeshStandardMaterial({
+    color: 0x27272a,
+    emissive: 0xd41514,
+    emissiveIntensity: 0.0,
+    roughness: 0.15,
+    metalness: 0.85,
+  });
+
+  const palmCoreCenterMat = new THREE.MeshBasicMaterial({
+    color: 0xff4d4f,
+    transparent: true,
+    opacity: 0.0,
+  });
+
+  const root = new THREE.Group();
+  root.position.set(WRIST_PIVOT_X, WORLD_A_Y, 0);
+
+  // 1. Engineered Forearm Structure (Emerges from deep chasm & docks with World A)
+  const forearmGroup = new THREE.Group();
+  forearmGroup.rotation.z = 0.5;
+  root.add(forearmGroup);
+
+  const forearmMain = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.34, 0.46, 2.8, 32, 1),
+    shellMat
+  );
+  forearmMain.position.y = -1.45;
+  forearmMain.scale.set(1.0, 1.0, 1.35);
+  forearmMain.castShadow = true;
+  forearmMain.receiveShadow = true;
+  forearmGroup.add(forearmMain);
+
+  // Armor segmentation collars along forearm
+  for (const [yOff, rad, h] of [
+    [-0.28, 0.37, 0.12],
+    [-0.95, 0.41, 0.1],
+    [-1.68, 0.45, 0.12],
+  ] as [number, number, number][]) {
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, h, 32), subFrameMat);
+    band.position.y = yOff;
+    band.scale.set(1.02, 1.0, 1.37);
+    forearmGroup.add(band);
+  }
+
+  // Dual Hydraulic Actuators on camera-facing and far sides of forearm
+  for (const zSide of [-0.36, 0.36]) {
+    const pistonCylinder = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.052, 0.062, 1.35, 16),
+      subFrameMat
+    );
+    pistonCylinder.position.set(0.18, -1.35, zSide);
+    pistonCylinder.rotation.z = -0.08;
+    forearmGroup.add(pistonCylinder);
+
+    const pistonRod = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.034, 0.034, 1.05, 16),
+      chromeMat
+    );
+    pistonRod.position.set(0.14, -0.65, zSide);
+    pistonRod.rotation.z = -0.08;
+    forearmGroup.add(pistonRod);
+  }
+
+  // Subtle recessed optical seam on forearm
+  const forearmSeam = new THREE.Mesh(new THREE.BoxGeometry(0.025, 2.0, 0.02), seamLightMat);
+  forearmSeam.position.set(0.08, -1.25, 0.48);
+  forearmGroup.add(forearmSeam);
+
+  // 2. Rotary Wrist & Palm Assembly
+  const wristGroup = new THREE.Group();
+  wristGroup.rotation.order = "ZYX";
+  root.add(wristGroup);
+
+  const wristCore = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.98, 32), subFrameMat);
+  wristCore.rotation.x = Math.PI / 2;
+  wristCore.position.set(0, -0.22, 0);
+  wristGroup.add(wristCore);
+
+  // Precision Chrome Wrist Bearings
+  for (const zSide of [-0.51, 0.51]) {
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.06, 28), chromeMat);
+    cap.rotation.x = Math.PI / 2;
+    cap.position.set(0, -0.22, zSide);
+    wristGroup.add(cap);
+
+    const capRing = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.014, 12, 28), seamLightMat);
+    capRing.position.set(0, -0.22, zSide + (zSide > 0 ? 0.032 : -0.032));
+    wristGroup.add(capRing);
+  }
+
+  // Wrist-to-World-A Approach Bridge Ramp
+  const rampShape = new THREE.Shape();
+  rampShape.moveTo(-0.44, -0.46);
+  rampShape.lineTo(0.12, -0.52);
+  rampShape.lineTo(0.12, 0.52);
+  rampShape.lineTo(-0.44, 0.46);
+  rampShape.closePath();
+
+  const rampGeo = new THREE.ExtrudeGeometry(rampShape, {
+    depth: 0.14,
+    bevelEnabled: true,
+    bevelThickness: 0.028,
+    bevelSize: 0.028,
+    bevelSegments: 3,
+  });
+  rampGeo.rotateX(-Math.PI / 2);
+  rampGeo.translate(0, -0.15, 0);
+  const wristRamp = new THREE.Mesh(rampGeo, shellMat);
+  wristRamp.castShadow = true;
+  wristRamp.receiveShadow = true;
+  wristGroup.add(wristRamp);
+
+  // 3. Sculpted Titanium Palm Structure
+  const palmLength = 1.26;
+  const palmHalfWidth = 0.56;
+  const palmCorner = 0.14;
+  const pShape = new THREE.Shape();
+  const px0 = 0.04;
+  const px1 = px0 + palmLength;
+  pShape.moveTo(px0 + palmCorner, -palmHalfWidth);
+  pShape.lineTo(px1 - palmCorner, -palmHalfWidth);
+  pShape.quadraticCurveTo(px1, -palmHalfWidth, px1, -palmHalfWidth + palmCorner);
+  pShape.lineTo(px1, palmHalfWidth - palmCorner);
+  pShape.quadraticCurveTo(px1, palmHalfWidth, px1 - palmCorner, palmHalfWidth);
+  pShape.lineTo(px0 + palmCorner, palmHalfWidth);
+  pShape.quadraticCurveTo(px0, palmHalfWidth, px0, palmHalfWidth - palmCorner);
+  pShape.lineTo(px0, -palmHalfWidth + palmCorner);
+  pShape.quadraticCurveTo(px0, -palmHalfWidth, px0 + palmCorner, -palmHalfWidth);
+
+  const palmGeo = new THREE.ExtrudeGeometry(pShape, {
+    depth: 0.22,
+    bevelEnabled: true,
+    bevelThickness: 0.042,
+    bevelSize: 0.038,
+    bevelSegments: 4,
+    curveSegments: 14,
+  });
+  palmGeo.rotateX(-Math.PI / 2);
+  palmGeo.translate(0, -0.23, 0);
+  const palmMesh = new THREE.Mesh(palmGeo, shellMat);
+  palmMesh.castShadow = true;
+  palmMesh.receiveShadow = true;
+  wristGroup.add(palmMesh);
+
+  // Recessed Smoked-Titanium Walkway Deck Embedded Into Wrist & Palm Top Surface
+  const palmWalkway = new THREE.Mesh(
+    new THREE.BoxGeometry(1.66, 0.016, 0.62),
+    deckChannelMat
+  );
+  palmWalkway.position.set(0.45, 0.032, 0);
+  palmWalkway.receiveShadow = true;
+  wristGroup.add(palmWalkway);
+
+  // Under-palm structural sub-chassis
+  const underPalm = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.14, 0.96), subFrameMat);
+  underPalm.position.set(0.66, -0.26, 0);
+  wristGroup.add(underPalm);
+
+  // Palm Central Energy Core (Flush under glass in the center of the palm walkway)
+  const coreRecess = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.21, 0.21, 0.018, 32),
+    subFrameMat
+  );
+  coreRecess.position.set(0.68, 0.034, 0);
+  wristGroup.add(coreRecess);
+
+  const coreRing = new THREE.Mesh(new THREE.RingGeometry(0.13, 0.185, 36), palmCoreRingMat);
+  coreRing.rotation.x = -Math.PI / 2;
+  coreRing.position.set(0.68, 0.045, 0);
+  wristGroup.add(coreRing);
+
+  const coreCenter = new THREE.Mesh(new THREE.CircleGeometry(0.09, 32), palmCoreCenterMat);
+  coreCenter.rotation.x = -Math.PI / 2;
+  coreCenter.position.set(0.68, 0.046, 0);
+  wristGroup.add(coreCenter);
+
+  // Knuckle Actuator Bar at distal edge of palm
+  const knuckleBar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.11, 0.11, 1.08, 24),
+    subFrameMat
+  );
+  knuckleBar.rotation.x = Math.PI / 2;
+  knuckleBar.position.set(px1, -0.11, 0);
+  wristGroup.add(knuckleBar);
+
+  // 4. Four Articulated Multi-Phalangeal Fingers (Index, Middle, Ring, Pinky)
+  const fingerZOffsets = [-0.41, -0.14, 0.14, 0.41];
+  const fingerScales = [0.95, 1.0, 0.96, 0.86];
+  const phalanxLengths = [0.54, 0.42, 0.34];
+  const phalanxRadii = [0.102, 0.092, 0.08];
+
+  const fingers: THREE.Group[][] = fingerZOffsets.map((zPos, fIdx) => {
+    const segments: THREE.Group[] = [];
+    let parentObj: THREE.Object3D = wristGroup;
+    let localOffsetX = px1;
+
+    for (let sIdx = 0; sIdx < 3; sIdx++) {
+      const segLen = phalanxLengths[sIdx] * fingerScales[fIdx];
+      const segRad = phalanxRadii[sIdx];
+      const jointGroup = new THREE.Group();
+      jointGroup.position.set(localOffsetX, sIdx === 0 ? -0.105 : 0, sIdx === 0 ? zPos : 0);
+
+      // Knuckle Actuator Cylinder + Chrome Pivot Pin
+      const knuckleCyl = new THREE.Mesh(
+        new THREE.CylinderGeometry(segRad * 0.95, segRad * 0.95, 0.18, 20),
+        subFrameMat
+      );
+      knuckleCyl.rotation.x = Math.PI / 2;
+      jointGroup.add(knuckleCyl);
+
+      const pinCyl = new THREE.Mesh(
+        new THREE.CylinderGeometry(segRad * 0.42, segRad * 0.42, 0.21, 14),
+        chromeMat
+      );
+      pinCyl.rotation.x = Math.PI / 2;
+      jointGroup.add(pinCyl);
+
+      // Sculpted Titanium Phalanx Body
+      const phalanxCapsule = new THREE.CapsuleGeometry(
+        segRad * 0.88,
+        Math.max(0.05, segLen - segRad * 1.3),
+        8,
+        18
+      );
+      phalanxCapsule.rotateZ(Math.PI / 2);
+      phalanxCapsule.translate(segLen / 2, -0.01, 0);
+      const phalanxMesh = new THREE.Mesh(phalanxCapsule, shellMat);
+      phalanxMesh.castShadow = true;
+      phalanxMesh.receiveShadow = true;
+      jointGroup.add(phalanxMesh);
+
+      // Flat-topped Engineered Bridge Deck Plate on each phalanx
+      const armorPlate = new THREE.Mesh(
+        new THREE.BoxGeometry(segLen * 0.88, 0.04, segRad * 1.7),
+        fIdx === 1 || fIdx === 2 ? deckChannelMat : shellMat
+      );
+      armorPlate.position.set(segLen * 0.5, segRad * 0.88, 0);
+      armorPlate.castShadow = true;
+      armorPlate.receiveShadow = true;
+      jointGroup.add(armorPlate);
+
+      parentObj.add(jointGroup);
+      segments.push(jointGroup);
+      parentObj = jointGroup;
+      localOffsetX = segLen;
+    }
+    return segments;
+  });
+
+  // 5. Two-Segment Articulated Thumb (Foreground side of palm, z = +0.56)
+  const thumbBase = new THREE.Group();
+  thumbBase.position.set(0.34, -0.12, 0.56);
+  wristGroup.add(thumbBase);
+
+  const thumbSeg1Len = 0.48;
+  const thumbSeg1Cap = new THREE.CapsuleGeometry(0.108, thumbSeg1Len - 0.14, 8, 18);
+  thumbSeg1Cap.rotateZ(Math.PI / 2);
+  thumbSeg1Cap.translate(thumbSeg1Len / 2, 0, 0);
+  const thumbSeg1Mesh = new THREE.Mesh(thumbSeg1Cap, shellMat);
+  thumbSeg1Mesh.castShadow = true;
+  thumbBase.add(thumbSeg1Mesh);
+
+  const thumbBaseKnot = new THREE.Mesh(new THREE.SphereGeometry(0.122, 16, 14), subFrameMat);
+  thumbBase.add(thumbBaseKnot);
+
+  const thumbDistal = new THREE.Group();
+  thumbDistal.position.set(thumbSeg1Len, 0, 0);
+  thumbBase.add(thumbDistal);
+
+  const thumbSeg2Len = 0.38;
+  const thumbSeg2Cap = new THREE.CapsuleGeometry(0.092, thumbSeg2Len - 0.12, 8, 18);
+  thumbSeg2Cap.rotateZ(Math.PI / 2);
+  thumbSeg2Cap.translate(thumbSeg2Len / 2, 0, 0);
+  const thumbSeg2Mesh = new THREE.Mesh(thumbSeg2Cap, shellMat);
+  thumbSeg2Mesh.castShadow = true;
+  thumbDistal.add(thumbSeg2Mesh);
+
+  const thumbDistalKnot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.095, 0.095, 0.18, 16),
+    subFrameMat
+  );
+  thumbDistalKnot.rotation.x = Math.PI / 2;
+  thumbDistal.add(thumbDistalKnot);
+
+  // 6. Precision-Milled Optical Pathway Strips along Wrist -> Palm -> Extended Fingers
+  // Unlit base color is dark anthracite (#27272a) so before Phase 4 it blends into the deck channel!
+  const pathwayMats: THREE.MeshStandardMaterial[] = [];
+  const numPathSegments = 18;
+
+  for (let i = 0; i < numPathSegments; i++) {
+    const u = i / (numPathSegments - 1);
+    const localX = lerp(-0.36, 2.48, u);
+    const segMat = new THREE.MeshStandardMaterial({
+      color: 0x272c38,
+      emissive: 0xd41514,
+      emissiveIntensity: 0.0,
+      roughness: 0.2,
+      metalness: 0.8,
+    });
+    pathwayMats.push(segMat);
+
+    const segGroup = new THREE.Group();
+    // Sleek thin lateral optical fiber rails + subtle micro-chevron node
+    const railGeo = new THREE.BoxGeometry(0.125, 0.01, 0.018);
+    const leftRail = new THREE.Mesh(railGeo, segMat);
+    leftRail.position.set(0, 0, -0.28);
+    const rightRail = new THREE.Mesh(railGeo, segMat);
+    rightRail.position.set(0, 0, 0.28);
+
+    const centerTick = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.008, 0.12), segMat);
+    segGroup.add(leftRail, rightRail, centerTick);
+
+    if (localX <= px1) {
+      const holder = new THREE.Group();
+      holder.position.set(localX, 0.043, 0);
+      holder.add(segGroup);
+      wristGroup.add(holder);
+    } else {
+      const fingerDist = localX - px1;
+      const holder = new THREE.Group();
+      if (fingerDist <= phalanxLengths[0]) {
+        holder.position.set(fingerDist, 0.115, 0.14);
+        holder.add(segGroup);
+        fingers[1][0].add(holder);
+      } else if (fingerDist <= phalanxLengths[0] + phalanxLengths[1]) {
+        holder.position.set(fingerDist - phalanxLengths[0], 0.105, 0.14);
+        holder.add(segGroup);
+        fingers[1][1].add(holder);
+      } else {
+        holder.position.set(
+          fingerDist - phalanxLengths[0] - phalanxLengths[1],
+          0.095,
+          0.14
+        );
+        holder.add(segGroup);
+        fingers[1][2].add(holder);
+      }
+    }
+  }
+
+  const handLight = new THREE.PointLight(0xd41514, 0, 6.0, 1.5);
+  handLight.position.set(0.68, 0.65, 0.2);
+  wristGroup.add(handLight);
+
+  return {
+    root,
+    wristGroup,
+    fingers,
+    thumbJoints: [thumbBase, thumbDistal],
+    pathwayMats,
+    deckChannelMat,
+    shellMat,
+    subFrameMat,
+    chromeMat,
+    seamLightMat,
+    palmCoreRingMat,
+    palmCoreCenterMat,
+    handLight,
+  };
+}
+
+interface HandPoseState {
+  riseProgress: number;
+  transformProgress: number;
+  settleBounce: number;
+  connectProgress: number;
+  studentX: number;
+  bridgeDip: number;
+  ambientPulse: number;
+}
+
+const COLOR_UNLIT_RAIL = new THREE.Color(0x272c38);
+const COLOR_LIT_CRIMSON = new THREE.Color(0xd41514);
+
+function applyRoboticHandPose(hand: RoboticHandRig, s: HandPoseState) {
+  const emergeEase = easeOutCubic(s.riseProgress);
+  const transformEase = easeInOutCubic(s.transformProgress);
+
+  const hiddenY = -4.3;
+  const hiddenXOffset = -0.32;
+  hand.root.position.set(
+    WRIST_PIVOT_X + hiddenXOffset * (1 - emergeEase),
+    lerp(hiddenY, WORLD_A_Y, emergeEase) - s.bridgeDip + s.settleBounce * 0.032,
+    0
+  );
+  hand.root.visible = s.riseProgress > 0.005;
+
+  const startPitch = 0.66;
+  const targetPitch = BRIDGE_SLOPE;
+  hand.wristGroup.rotation.z =
+    lerp(startPitch, targetPitch, transformEase) + s.settleBounce * 0.022;
+  hand.wristGroup.rotation.x = lerp(0.3, 0.0, transformEase);
+
+  const phalanxWeights = [0.78, 1.05, 0.88];
+  hand.fingers.forEach((segs, fIdx) => {
+    const fingerDelay = fIdx * 0.06;
+    const fingerOpen = easeInOutCubic((s.transformProgress - fingerDelay) / (1 - fingerDelay * 0.8));
+    const curlAngle = (1 - fingerOpen) * 0.92;
+    segs.forEach((joint, sIdx) => {
+      joint.rotation.z = -curlAngle * phalanxWeights[sIdx];
+    });
+  });
+
+  const thumbOpen = easeInOutCubic(clamp01((s.transformProgress - 0.08) / 0.85));
+  hand.thumbJoints[0].rotation.y = lerp(-0.55, -0.18, thumbOpen);
+  hand.thumbJoints[0].rotation.z = lerp(-0.65, -0.06, thumbOpen);
+  hand.thumbJoints[1].rotation.z = lerp(-0.75, -0.05, thumbOpen);
+
+  const totalSegs = hand.pathwayMats.length;
+  hand.pathwayMats.forEach((mat, idx) => {
+    const segU = idx / (totalSegs - 1);
+    const segWorldX = lerp(BRIDGE_START_X, BRIDGE_END_X, segU);
+    const segActivate = smoothstep((s.connectProgress - segU * 0.75) / 0.25);
+
+    const distToStudent = Math.abs(s.studentX - segWorldX);
+    const footstepBoost =
+      s.studentX >= BRIDGE_START_X && s.studentX <= BRIDGE_END_X
+        ? Math.max(0, 1 - distToStudent / 0.45) * 2.4
+        : 0;
+
+    const waveBoost =
+      s.connectProgress >= 0.99
+        ? (Math.sin(s.ambientPulse * 2.8 - segU * Math.PI * 2.5) * 0.5 + 0.5) * 0.8
+        : 0;
+
+    mat.color.lerpColors(COLOR_UNLIT_RAIL, COLOR_LIT_CRIMSON, segActivate);
+    mat.emissiveIntensity = segActivate * (1.5 + footstepBoost + waveBoost);
+  });
+
+  const corePower = smoothstep(s.connectProgress * 1.2);
+  hand.palmCoreRingMat.color.lerpColors(COLOR_UNLIT_RAIL, COLOR_LIT_CRIMSON, corePower);
+  hand.palmCoreRingMat.emissiveIntensity = corePower * 2.4;
+  hand.palmCoreCenterMat.opacity = corePower * 0.88;
+  hand.seamLightMat.color.lerpColors(COLOR_UNLIT_RAIL, COLOR_LIT_CRIMSON, 0.3 + corePower * 0.7);
+  hand.seamLightMat.emissiveIntensity = 0.2 + emergeEase * 0.45 + corePower * 1.1;
+  hand.handLight.intensity = corePower * 2.2;
+}
+
+// ---------------------------------------------------------------------------
+// WORLD A (UNIVERSITY QUAD) & WORLD B (INNOVATION CAMPUS) BUILDERS
+// ---------------------------------------------------------------------------
+interface EnvironmentsRig {
+  worldAGroup: THREE.Group;
+  worldBGroup: THREE.Group;
+  stoneMat: THREE.MeshStandardMaterial;
+  stoneTrimMat: THREE.MeshStandardMaterial;
+  uniWindowMat: THREE.MeshStandardMaterial;
+  cliffMat: THREE.MeshStandardMaterial;
+  campusLanternLight: THREE.PointLight;
+  worldBGlassMat: THREE.MeshPhysicalMaterial;
+  worldBSteelMat: THREE.MeshStandardMaterial;
+  worldBWindowMat: THREE.MeshStandardMaterial;
+  worldBBeaconMat: THREE.MeshStandardMaterial;
+  worldBRingMat: THREE.MeshBasicMaterial;
+  worldBLight: THREE.PointLight;
+}
+
+function buildTwoWorlds(): EnvironmentsRig {
+  const cliffMat = new THREE.MeshStandardMaterial({
+    color: 0x181c24,
+    roughness: 0.85,
+    metalness: 0.15,
+    flatShading: true,
+  });
+
+  // -------------------------------------------------------------------------
+  // WORLD A — WHERE YOU BEGIN (Realistic University Quad & Overlook Terrace)
+  // -------------------------------------------------------------------------
+  const worldAGroup = new THREE.Group();
+
+  const stoneTex = createUniversityStoneTexture(false);
+  const stoneMat = new THREE.MeshStandardMaterial({
+    color: 0x4a453f,
+    map: stoneTex,
+    roughness: 0.68,
+    metalness: 0.08,
+  });
+
+  const stoneTrimMat = new THREE.MeshStandardMaterial({
+    color: 0x665f57,
+    roughness: 0.55,
+    metalness: 0.12,
+  });
+
+  const uniWindowMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    emissive: 0xffdba8,
+    emissiveIntensity: 0.45,
+    roughness: 0.2,
+    metalness: 0.5,
+  });
+
+  const foliageMat = new THREE.MeshStandardMaterial({
+    color: 0x234233,
+    roughness: 0.8,
+    metalness: 0.05,
+  });
+
+  // Layered Geological Cliff Strata & Retaining Wall beneath World A (x = -1.6 to 0.88)
+  const leftStrataSpecs: [number, number, number, number, number, number][] = [
+    [-0.35, -0.55, -0.15, 2.55, 0.75, 2.2],
+    [-0.55, -1.35, -0.2, 2.35, 0.95, 2.0],
+    [-0.75, -2.35, -0.25, 2.1, 1.2, 1.8],
+    [-0.95, -3.55, -0.3, 1.85, 1.4, 1.6],
+    [0.32, -0.42, 0.0, 0.95, 0.55, 1.45],
+    [0.18, -1.05, -0.05, 0.85, 0.78, 1.25],
+  ];
+  for (const [sx, sy, sz, sw, sh, sd] of leftStrataSpecs) {
+    const stratum = new THREE.Mesh(new THREE.BoxGeometry(sw, sh, sd), cliffMat);
+    stratum.position.set(sx, sy, sz);
+    stratum.receiveShadow = true;
+    worldAGroup.add(stratum);
+  }
+
+  // Main University Terrace Platform (Top surface at y = WORLD_A_Y = 0.0, right edge at x = 0.86)
+  const terraceSlab = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.22, 2.3), stoneMat);
+  terraceSlab.position.set(-0.58, -0.11, -0.15);
+  terraceSlab.receiveShadow = true;
+  terraceSlab.castShadow = true;
+  worldAGroup.add(terraceSlab);
+
+  const terraceCornice = new THREE.Mesh(new THREE.BoxGeometry(2.96, 0.06, 2.36), stoneTrimMat);
+  terraceCornice.position.set(-0.58, -0.03, -0.15);
+  terraceCornice.receiveShadow = true;
+  worldAGroup.add(terraceCornice);
+
+  // University Academic Hall & Colonnade Portico (x = -1.7 to 0.15, z = -0.82)
+  const academicHall = new THREE.Group();
+  academicHall.position.set(-0.62, 0.0, -0.78);
+  worldAGroup.add(academicHall);
+
+  // Main Masonry Library Building Backdrop
+  const hallBody = new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.62, 0.68), stoneMat);
+  hallBody.position.set(0, 0.81, -0.22);
+  hallBody.castShadow = true;
+  hallBody.receiveShadow = true;
+  academicHall.add(hallBody);
+
+  // Arched Collegiate Windows on the Academic Hall
+  for (const wx of [-0.68, -0.22, 0.22, 0.68]) {
+    const winFrame = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.68, 0.06), stoneTrimMat);
+    winFrame.position.set(wx, 0.82, 0.11);
+    academicHall.add(winFrame);
+
+    const winPane = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.6, 0.07), uniWindowMat);
+    winPane.position.set(wx, 0.82, 0.115);
+    academicHall.add(winPane);
+  }
+
+  // Classical Fluted Columns along the Front Colonnade
+  for (const cx of [-0.88, -0.44, 0.0, 0.44, 0.88]) {
+    const colBase = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.1, 0.17), stoneTrimMat);
+    colBase.position.set(cx, 0.05, 0.34);
+    academicHall.add(colBase);
+
+    const colShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 1.38, 16), stoneTrimMat);
+    colShaft.position.set(cx, 0.78, 0.34);
+    colShaft.castShadow = true;
+    colShaft.receiveShadow = true;
+    academicHall.add(colShaft);
+
+    const colCap = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.18), stoneTrimMat);
+    colCap.position.set(cx, 1.48, 0.34);
+    academicHall.add(colCap);
+  }
+
+  // Classical Entablature & Cornice Roof
+  const entablature = new THREE.Mesh(new THREE.BoxGeometry(2.18, 0.18, 0.88), stoneTrimMat);
+  entablature.position.set(0, 1.61, 0.04);
+  entablature.castShadow = true;
+  academicHall.add(entablature);
+
+  const pediment = new THREE.Mesh(new THREE.ConeGeometry(1.28, 0.42, 4), stoneMat);
+  pediment.position.set(0, 1.91, 0.04);
+  pediment.rotation.y = Math.PI / 4;
+  pediment.scale.set(1.22, 1, 0.65);
+  academicHall.add(pediment);
+
+  // Foreground Terrace Stone Balustrade
+  for (let i = 0; i < 7; i++) {
+    const bx = -0.55 + i * 0.2;
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.21, 0.04), stoneTrimMat);
+    post.position.set(bx, 0.105, 0.64);
+    worldAGroup.add(post);
+  }
+  const railBar = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.04, 0.06), stoneTrimMat);
+  railBar.position.set(0.05, 0.22, 0.64);
+  worldAGroup.add(railBar);
+
+  // Campus Trees & Courtyard Greenery
+  for (const [tx, tz, scale] of [
+    [-1.45, 0.45, 1.0],
+    [0.42, -0.68, 0.88],
+  ] as [number, number, number][]) {
+    const treeGroup = new THREE.Group();
+    treeGroup.position.set(tx, 0, tz);
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035 * scale, 0.05 * scale, 0.45 * scale, 8),
+      cliffMat
+    );
+    trunk.position.y = 0.22 * scale;
+    treeGroup.add(trunk);
+
+    const canopy1 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.26 * scale, 1), foliageMat);
+    canopy1.position.set(0, 0.52 * scale, 0);
+    canopy1.castShadow = true;
+    treeGroup.add(canopy1);
+
+    const canopy2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 * scale, 1), foliageMat);
+    canopy2.position.set(0.12 * scale, 0.64 * scale, 0.06 * scale);
+    treeGroup.add(canopy2);
+
+    worldAGroup.add(treeGroup);
+  }
+
+  // Academic Courtyard Lamppost near World A Edge
+  const lanternPost = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.026, 0.82, 10), cliffMat);
+  lanternPost.position.set(0.62, 0.41, -0.42);
+  worldAGroup.add(lanternPost);
+
+  const lanternGlobe = new THREE.Mesh(
+    new THREE.SphereGeometry(0.052, 14, 14),
+    new THREE.MeshBasicMaterial({ color: 0xffe4b5 })
+  );
+  lanternGlobe.position.set(0.62, 0.84, -0.42);
+  worldAGroup.add(lanternGlobe);
+
+  const campusLanternLight = new THREE.PointLight(0xffcf96, 1.8, 4.5, 1.5);
+  campusLanternLight.position.set(0.62, 0.88, -0.32);
+  worldAGroup.add(campusLanternLight);
+
+  // -------------------------------------------------------------------------
+  // WORLD B — WHERE YOU CAN GO (Modern Glass Architecture & Tech Campus)
+  // -------------------------------------------------------------------------
+  const worldBGroup = new THREE.Group();
+
+  const { map: cwMap, emissiveMap: cwEmissive } = createCurtainWallTexture();
+  const worldBWindowMat = new THREE.MeshPhysicalMaterial({
+    color: 0x1e293b,
+    map: cwMap,
+    emissive: 0x7dd3fc,
+    emissiveMap: cwEmissive,
+    emissiveIntensity: 0.65,
+    roughness: 0.15,
+    metalness: 0.65,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.08,
+  });
+
+  const worldBGlassMat = new THREE.MeshPhysicalMaterial({
+    color: 0x38bdf8,
+    metalness: 0.25,
+    roughness: 0.1,
+    transparent: true,
+    opacity: 0.38,
+    clearcoat: 1.0,
+  });
+
+  const worldBSteelMat = new THREE.MeshStandardMaterial({
+    color: 0x94a3b8,
+    metalness: 0.86,
+    roughness: 0.2,
+  });
+
+  const worldBBeaconMat = new THREE.MeshStandardMaterial({
+    color: 0x334155,
+    emissive: 0xd41514,
+    emissiveIntensity: 0.5,
+    roughness: 0.2,
+    metalness: 0.85,
+  });
+
+  // Engineered Multi-Strata Foundation & Cliff beneath World B (x = 3.80 to 6.5)
+  const rightStrataSpecs: [number, number, number, number, number, number][] = [
+    [4.95, -0.45, -0.2, 2.7, 0.78, 2.4],
+    [5.15, -1.3, -0.25, 2.5, 1.0, 2.2],
+    [5.35, -2.35, -0.3, 2.2, 1.3, 1.9],
+    [5.55, -3.6, -0.35, 1.9, 1.5, 1.7],
+    [4.12, -0.32, 0.0, 0.85, 0.52, 1.5],
+    [4.28, -0.95, -0.05, 0.75, 0.78, 1.3],
+  ];
+  for (const [sx, sy, sz, sw, sh, sd] of rightStrataSpecs) {
+    const stratum = new THREE.Mesh(new THREE.BoxGeometry(sw, sh, sd), cliffMat);
+    stratum.position.set(sx, sy, sz);
+    stratum.receiveShadow = true;
+    worldBGroup.add(stratum);
+  }
+
+  // Sleek Cantilevered Innovation Plaza Deck (Left edge at x = 3.78, top at y = WORLD_B_Y = 0.14)
+  const plazaDeck = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.2, 2.5), worldBSteelMat);
+  plazaDeck.position.set(5.28, WORLD_B_Y - 0.1, -0.2);
+  plazaDeck.receiveShadow = true;
+  plazaDeck.castShadow = true;
+  worldBGroup.add(plazaDeck);
+
+  // Precision Titanium Receiver Pad where the Robotic Hand's fingertips dock (x = 3.85)
+  const receiverBase = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.03, 1.16), worldBSteelMat);
+  receiverBase.position.set(3.96, WORLD_B_Y + 0.015, 0);
+  worldBGroup.add(receiverBase);
+
+  const receiverAccent = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.036, 1.08), worldBBeaconMat);
+  receiverAccent.position.set(3.78, WORLD_B_Y + 0.018, 0);
+  worldBGroup.add(receiverAccent);
+
+  // Glass Guardrail along foreground edge of World B Plaza
+  const glassRail = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.18, 0.025), worldBGlassMat);
+  glassRail.position.set(4.95, WORLD_B_Y + 0.09, 0.66);
+  worldBGroup.add(glassRail);
+
+  // Foreground Curved Glass Innovation Rotunda / Atrium Pavilion
+  const rotundaGroup = new THREE.Group();
+  rotundaGroup.position.set(4.65, WORLD_B_Y, -0.52);
+  worldBGroup.add(rotundaGroup);
+
+  const rotundaCore = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.38, 0.42, 1.25, 28),
+    worldBWindowMat
+  );
+  rotundaCore.position.y = 0.625;
+  rotundaCore.castShadow = true;
+  rotundaGroup.add(rotundaCore);
+
+  for (const ringY of [0.32, 0.64, 0.96, 1.26]) {
+    const floorRing = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.435, 0.435, 0.04, 28),
+      worldBSteelMat
+    );
+    floorRing.position.y = ringY;
+    rotundaGroup.add(floorRing);
+  }
+
+  // Tiered Curtain-Wall Glass Skyscrapers & Corporate Innovation Towers
+  const towerSpecs: { x: number; z: number; w: number; h: number; d: number }[] = [
+    { x: 5.25, z: -0.95, w: 0.68, h: 2.95, d: 0.62 },
+    { x: 4.35, z: -1.25, w: 0.56, h: 2.15, d: 0.54 },
+    { x: 5.95, z: -0.75, w: 0.62, h: 2.45, d: 0.58 },
+    { x: 5.05, z: -1.72, w: 0.72, h: 3.65, d: 0.66 },
+    { x: 5.82, z: -1.52, w: 0.58, h: 3.1, d: 0.56 },
+  ];
+
+  towerSpecs.forEach((t, idx) => {
+    const towerGroup = new THREE.Group();
+    towerGroup.position.set(t.x, WORLD_B_Y, t.z);
+
+    // Curtain-Wall Windowed Skyscraper Body (Directly visible, no opaque wrapper!)
+    const body = new THREE.Mesh(new THREE.BoxGeometry(t.w, t.h, t.d), worldBWindowMat);
+    body.position.y = t.h / 2;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    towerGroup.add(body);
+
+    // Architectural Corner Mullion Pillars
+    for (const cx of [-t.w / 2, t.w / 2]) {
+      for (const cz of [-t.d / 2, t.d / 2]) {
+        const pillar = new THREE.Mesh(
+          new THREE.BoxGeometry(0.045, t.h + 0.04, 0.045),
+          worldBSteelMat
+        );
+        pillar.position.set(cx, t.h / 2, cz);
+        towerGroup.add(pillar);
+      }
+    }
+
+    // Illuminated Crown & Setback Penthouse
+    const crown = new THREE.Mesh(
+      new THREE.BoxGeometry(t.w * 0.9, 0.1, t.d * 0.9),
+      worldBSteelMat
+    );
+    crown.position.y = t.h + 0.05;
+    towerGroup.add(crown);
+
+    if (idx % 2 === 0) {
+      const spire = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.01, 0.022, 0.58, 8),
+        worldBBeaconMat
+      );
+      spire.position.y = t.h + 0.34;
+      towerGroup.add(spire);
+    }
+
+    worldBGroup.add(towerGroup);
+  });
+
+  // Elevated Glass Skybridge connecting towers
+  const skybridge = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.12, 0.24), worldBSteelMat);
+  skybridge.position.set(4.8, WORLD_B_Y + 1.55, -1.08);
+  worldBGroup.add(skybridge);
+
+  // Subtle Architectural Horizon Halo Arch behind World B
+  const worldBRingMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.16,
+  });
+  const innovationArch = new THREE.Mesh(
+    new THREE.RingGeometry(1.95, 1.99, 64, 1, 0, Math.PI),
+    worldBRingMat
+  );
+  innovationArch.position.set(5.15, WORLD_B_Y + 0.45, -2.1);
+  innovationArch.rotation.y = -0.22;
+  worldBGroup.add(innovationArch);
+
+  const worldBLight = new THREE.PointLight(0x38bdf8, 1.2, 8.5, 1.4);
+  worldBLight.position.set(4.85, WORLD_B_Y + 1.8, -0.4);
+  worldBGroup.add(worldBLight);
+
+  return {
+    worldAGroup,
+    worldBGroup,
+    stoneMat,
+    stoneTrimMat,
+    uniWindowMat,
+    cliffMat,
+    campusLanternLight,
+    worldBGlassMat,
+    worldBSteelMat,
+    worldBWindowMat,
+    worldBBeaconMat,
+    worldBRingMat,
+    worldBLight,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// MAIN REACT COMPONENT
+// ---------------------------------------------------------------------------
+const PHASE_LABELS: Record<number, string> = {
+  1: "Phase 1: The Gap",
+  2: "Phase 2: Emergence",
+  3: "Phase 3: Transformation",
+  4: "Phase 4: Connection",
+  5: "Phase 5: The Crossing",
+  6: "Phase 6: Possibility",
+};
 
 export default function CinematicBridgeHero3D() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [sequenceProgress, setSequenceProgress] = useState(0);
+  const [currentPhase, setCurrentPhase] = useState<number>(1);
+  const [isSequenceComplete, setIsSequenceComplete] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [webglFallback, setWebglFallback] = useState(false);
 
-  const replay = useCallback(() => {
-    setIsPlaying(false);
-    setTimeout(() => setIsPlaying(true), 50);
+  const controlRef = useRef<{
+    replay: () => void;
+    seek: (timeSec: number) => void;
+    getPhase: () => number;
+  } | null>(null);
+
+  const handleReplay = useCallback(() => {
+    controlRef.current?.replay();
   }, []);
 
   useEffect(() => {
@@ -160,7 +1364,6 @@ export default function CinematicBridgeHero3D() {
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
 
-    // WebGL Renderer Setup
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({
@@ -170,52 +1373,218 @@ export default function CinematicBridgeHero3D() {
         powerPreference: "high-performance",
         stencil: false,
       });
-    } catch (e) {
-      console.warn("WebGL not supported:", e);
+    } catch {
+      setWebglFallback(true);
       return;
     }
 
-    const isMobileDevice = typeof window !== "undefined" && (window.innerWidth < 768 || "ontouchstart" in window);
+    const isMobile =
+      typeof window !== "undefined" &&
+      (window.innerWidth < 768 || "ontouchstart" in window);
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2.0));
     renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
-    // On mobile devices, disable heavy soft shadow computations to ensure 60fps fluidity
-    renderer.shadowMap.enabled = !isMobileDevice;
-    if (!isMobileDevice) {
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMappingExposure = 1.14;
+    renderer.shadowMap.enabled = !isMobile;
+    if (!isMobile) {
+      renderer.shadowMap.type = THREE.PCFShadowMap;
     }
 
-    // Scene & Fog
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x080808, 0.038);
 
-    // Camera Setup - Perfectly framed matching reference image
-    const initialAspect = container.clientWidth / container.clientHeight;
-    const initialFov = container.clientWidth < 768 ? 46 : 36;
+    // Generate PMREM Environment BEFORE any CanvasTexture upload so UNPACK_FLIP_Y_WEBGL is false
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    const envTexture = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = envTexture;
+    scene.environmentIntensity = 0.78;
+
+    const fog = new THREE.FogExp2(0x080808, 0.028);
+    scene.fog = fog;
+
     const camera = new THREE.PerspectiveCamera(
-      initialFov,
-      initialAspect,
+      container.clientWidth < 768 ? 46 : 34,
+      container.clientWidth / Math.max(1, container.clientHeight),
       0.1,
-      120
+      100
     );
-    const startCamPos = new THREE.Vector3(
-      container.clientWidth < 768 ? 0.2 : -0.4,
-      container.clientWidth < 768 ? 2.6 : 2.4,
-      container.clientWidth < 768 ? 10.4 : 9.4
-    );
-    const finalCamPos = new THREE.Vector3(
-      container.clientWidth < 768 ? -0.2 : -0.8,
-      container.clientWidth < 768 ? 2.1 : 1.75,
-      container.clientWidth < 768 ? 9.8 : 8.6
-    );
-    camera.position.copy(startCamPos);
 
-    // Mouse Parallax Damping Variables
+    // Lighting Rig
+    const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 1.15);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(0xf8fafc, 2.5);
+    sunLight.position.set(-2.5, 7.8, 5.8);
+    sunLight.castShadow = !isMobile;
+    if (!isMobile) {
+      sunLight.shadow.mapSize.width = 1024;
+      sunLight.shadow.mapSize.height = 1024;
+      sunLight.shadow.camera.near = 1;
+      sunLight.shadow.camera.far = 25;
+      const d = 6.0;
+      sunLight.shadow.camera.left = -d;
+      sunLight.shadow.camera.right = d;
+      sunLight.shadow.camera.top = d;
+      sunLight.shadow.camera.bottom = -d;
+      sunLight.shadow.bias = -0.0005;
+    }
+    scene.add(sunLight);
+
+    const rimLight = new THREE.DirectionalLight(0x93c5fd, 1.9);
+    rimLight.position.set(6.0, 4.5, -3.5);
+    scene.add(rimLight);
+
+    // Build World A, World B, Giant Robotic Hand Bridge, and Student Character
+    const worlds = buildTwoWorlds();
+    scene.add(worlds.worldAGroup, worlds.worldBGroup);
+
+    const handRig = buildRoboticHandBridge();
+    scene.add(handRig.root);
+
+    const studentRig = buildRealisticStudentRig();
+    scene.add(studentRig.root);
+
+    // Atmospheric Valley Mist in the Chasm below
+    const chasmMistMat = new THREE.MeshBasicMaterial({
+      color: 0x1e293b,
+      transparent: true,
+      opacity: 0.24,
+      depthWrite: false,
+    });
+    const chasmMist = new THREE.Mesh(new THREE.PlaneGeometry(18, 12), chasmMistMat);
+    chasmMist.rotation.x = -Math.PI / 2;
+    chasmMist.position.set(2.3, -2.35, -1.2);
+    scene.add(chasmMist);
+
+    // -----------------------------------------------------------------------
+    // THEME SYNCHRONIZATION (LIGHT MODE vs DARK MODE)
+    // -----------------------------------------------------------------------
+    const detectLightMode = () => {
+      if (typeof document === "undefined") return false;
+      const rootEl = document.documentElement;
+      return (
+        rootEl.classList.contains("light") ||
+        rootEl.getAttribute("data-theme") === "light" ||
+        (!rootEl.classList.contains("dark") &&
+          rootEl.getAttribute("data-theme") !== "dark" &&
+          document.body.classList.contains("light"))
+      );
+    };
+
+    let isLightMode = detectLightMode();
+
+    const applyThemePalette = (light: boolean) => {
+      isLightMode = light;
+      if (light) {
+        // Light Mode: Crisp natural daylight, warm limestone university, gleaming silver-titanium hand
+        fog.color.setHex(0xeaf2fb);
+        fog.density = 0.018;
+        scene.environmentIntensity = 0.98;
+        renderer.toneMappingExposure = 1.2;
+
+        hemiLight.color.setHex(0xffffff);
+        hemiLight.groundColor.setHex(0xcbd5e1);
+        hemiLight.intensity = 1.5;
+
+        sunLight.color.setHex(0xfffbeb);
+        sunLight.intensity = 2.9;
+
+        rimLight.color.setHex(0x38bdf8);
+        rimLight.intensity = 1.35;
+
+        // World A: Warm natural university limestone in daylight
+        worlds.stoneMat.color.setHex(0xe2dcd3);
+        worlds.stoneTrimMat.color.setHex(0xf0ece1);
+        worlds.uniWindowMat.color.setHex(0x38bdf8);
+        worlds.uniWindowMat.emissive.setHex(0xe0f2fe);
+        worlds.uniWindowMat.emissiveIntensity = 0.25;
+        worlds.cliffMat.color.setHex(0x64748b);
+        worlds.campusLanternLight.intensity = 0.4;
+
+        // World B: Bright architectural glass & steel towers in daylight
+        worlds.worldBGlassMat.color.setHex(0x0284c7);
+        worlds.worldBSteelMat.color.setHex(0xe2e8f0);
+        worlds.worldBWindowMat.color.setHex(0x334155);
+        worlds.worldBWindowMat.emissive.setHex(0x38bdf8);
+
+        // Robotic Hand: Gleaming titanium-silver shell with slate mechanical joints
+        handRig.shellMat.color.setHex(0xf1f5f9);
+        handRig.shellMat.roughness = 0.17;
+        handRig.shellMat.metalness = 0.82;
+        handRig.subFrameMat.color.setHex(0x334155);
+        handRig.deckChannelMat.color.setHex(0x334155);
+        chasmMistMat.color.setHex(0xdbeafe);
+        chasmMistMat.opacity = 0.38;
+
+        studentRig.jacketMat.color.setHex(0x1e3a8a);
+        studentRig.pantsMat.color.setHex(0x1e293b);
+      } else {
+        // Dark Mode: Deep Black (#080808), Chrome Silver (#CDCBCA), Laser Crimson (#D41514)
+        fog.color.setHex(0x080808);
+        fog.density = 0.028;
+        scene.environmentIntensity = 0.78;
+        renderer.toneMappingExposure = 1.14;
+
+        hemiLight.color.setHex(0x94a3b8);
+        hemiLight.groundColor.setHex(0x090a0f);
+        hemiLight.intensity = 1.05;
+
+        sunLight.color.setHex(0xe2e8f0);
+        sunLight.intensity = 2.4;
+
+        rimLight.color.setHex(0xcfd8dc);
+        rimLight.intensity = 2.1;
+
+        // World A: Cinematic evening university stone colonnade with warm library windows
+        worlds.stoneMat.color.setHex(0x4a453f);
+        worlds.stoneTrimMat.color.setHex(0x665f57);
+        worlds.uniWindowMat.color.setHex(0x1e293b);
+        worlds.uniWindowMat.emissive.setHex(0xffdba8);
+        worlds.uniWindowMat.emissiveIntensity = 0.55;
+        worlds.cliffMat.color.setHex(0x181c24);
+        worlds.campusLanternLight.intensity = 2.2;
+
+        // World B: Deep glass skyscrapers with luminous cyan/silver office bays
+        worlds.worldBGlassMat.color.setHex(0x38bdf8);
+        worlds.worldBSteelMat.color.setHex(0x94a3b8);
+        worlds.worldBWindowMat.color.setHex(0x1e293b);
+        worlds.worldBWindowMat.emissive.setHex(0x7dd3fc);
+
+        // Robotic Hand: Brushed Chrome Silver (#CDCBCA) & deep basalt joints
+        handRig.shellMat.color.setHex(0xcdcbca);
+        handRig.shellMat.roughness = 0.19;
+        handRig.shellMat.metalness = 0.88;
+        handRig.subFrameMat.color.setHex(0x181b22);
+        handRig.deckChannelMat.color.setHex(0x14171f);
+        chasmMistMat.color.setHex(0x111827);
+        chasmMistMat.opacity = 0.25;
+
+        studentRig.jacketMat.color.setHex(0x3b4963);
+        studentRig.pantsMat.color.setHex(0x1e2430);
+      }
+    };
+
+    applyThemePalette(isLightMode);
+
+    const themeObserver = new MutationObserver(() => {
+      const nextLight = detectLightMode();
+      if (nextLight !== isLightMode) {
+        applyThemePalette(nextLight);
+      }
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme"],
+    });
+
+    // -----------------------------------------------------------------------
+    // MOUSE PARALLAX
+    // -----------------------------------------------------------------------
     const mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
     const onPointerMove = (e: PointerEvent) => {
       const rect = container.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
       const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const ny = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
       mouse.targetX = clamp(nx, -1, 1);
@@ -223,655 +1592,316 @@ export default function CinematicBridgeHero3D() {
     };
     window.addEventListener("pointermove", onPointerMove, { passive: true });
 
-    // -------------------------------------------------------------------------
-    // LIGHTING RIG (Cinematic Black × Silver × Laser Crimson)
-    // -------------------------------------------------------------------------
-    const ambientLight = new THREE.AmbientLight(0x08090d, 1.2);
-    scene.add(ambientLight);
+    // -----------------------------------------------------------------------
+    // CHOREOGRAPHED 6-PHASE EVALUATION
+    // -----------------------------------------------------------------------
+    let animId = 0;
+    let isInView = true;
+    let isTabVisible = !document.hidden;
+    const isReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // Cool key directional light for architectural top edges
-    const keyLight = new THREE.DirectionalLight(0xd4d8e2, 2.0);
-    keyLight.position.set(-6, 9, 6);
-    keyLight.castShadow = true;
-    keyLight.shadow.mapSize.width = 1024;
-    keyLight.shadow.mapSize.height = 1024;
-    keyLight.shadow.bias = -0.0004;
-    scene.add(keyLight);
+    let elapsedSec = isReducedMotion ? T_PHASE6_READY : 0;
+    let lastTick = performance.now();
+    let lastReportedPhase = 0;
+    let markedComplete = false;
 
-    // Rim light catching right-side geometry & student silhouettes
-    const rimLight = new THREE.DirectionalLight(0xcfd8dc, 2.8);
-    rimLight.position.set(7, 6, -3);
-    scene.add(rimLight);
+    const evaluateSceneAtTime = (t: number) => {
+      let phaseNum = 1;
+      if (t >= T_PHASE5_END) phaseNum = 6;
+      else if (t >= T_PHASE4_END) phaseNum = 5;
+      else if (t >= T_PHASE3_END) phaseNum = 4;
+      else if (t >= T_PHASE2_END) phaseNum = 3;
+      else if (t >= T_PHASE1_END) phaseNum = 2;
 
-    // Backlit halo light illuminating the city skyline and portal opening
-    const portalBacklight = new THREE.PointLight(0xe2e8f0, 4.2, 16, 1.2);
-    portalBacklight.position.set(3.4, 2.8, -4.8);
-    scene.add(portalBacklight);
+      if (phaseNum !== lastReportedPhase) {
+        lastReportedPhase = phaseNum;
+        setCurrentPhase(phaseNum);
+      }
+      if (t >= T_PHASE5_END && !markedComplete) {
+        markedComplete = true;
+        setIsSequenceComplete(true);
+      }
 
-    // Laser Crimson Gateway Ambient Glow Light (ignites in Scene 3)
-    const crimsonGatewayLight = new THREE.PointLight(0xd41514, 0, 16, 1.6);
-    crimsonGatewayLight.position.set(3.2, 2.2, -2.4);
-    scene.add(crimsonGatewayLight);
+      const riseU = clamp01((t - T_PHASE1_END) / (T_PHASE2_END - T_PHASE1_END));
+      const transformU = clamp01((t - T_PHASE2_END) / (T_PHASE3_END - T_PHASE2_END));
+      const connectU = clamp01((t - T_PHASE3_END) / (T_PHASE4_END - T_PHASE3_END));
+      const crossU = clamp01((t - T_PHASE4_END) / (T_PHASE5_END - T_PHASE4_END));
+      const possibilityU = clamp01((t - T_PHASE5_END) / (T_PHASE6_READY - T_PHASE5_END));
 
-    // -------------------------------------------------------------------------
-    // SKYLINE BACKGROUND TRAJECTORY ORBIT ARC (from Reference Image)
-    // -------------------------------------------------------------------------
-    const orbitGroup = new THREE.Group();
-    scene.add(orbitGroup);
+      let settleBounce = 0;
+      if (t > T_PHASE3_END - 0.2 && t < T_PHASE3_END + 0.9) {
+        const st = t - (T_PHASE3_END - 0.2);
+        settleBounce = Math.exp(-st * 5.5) * Math.sin(st * 16.0);
+      }
 
-    const orbitCurve = new THREE.EllipseCurve(
-      2.4, 2.0,            // ax, ay
-      5.2, 3.4,            // xRadius, yRadius
-      Math.PI * 0.12,      // aStartAngle
-      Math.PI * 0.92,      // aEndAngle
-      false,               // aClockwise
-      -0.18                // aRotation
-    );
-    const orbitPoints = orbitCurve.getPoints(50);
-    const orbitGeo = new THREE.BufferGeometry().setFromPoints(
-      orbitPoints.map((p) => new THREE.Vector3(p.x, p.y, -4.5))
-    );
-    const orbitMat = new THREE.LineBasicMaterial({
-      color: 0xd41514,
-      transparent: true,
-      opacity: 0.38,
-      linewidth: 1.5,
-    });
-    const orbitLine = new THREE.Line(orbitGeo, orbitMat);
-    orbitGroup.add(orbitLine);
+      let studentX = WORLD_A_START_X;
+      let normalizedSpeed = 0;
 
-    // Crimson beacon node on orbital trajectory
-    const orbitNodeGeo = new THREE.SphereGeometry(0.045, 12, 12);
-    const orbitNodeMat = new THREE.MeshBasicMaterial({ color: 0xff3b30 });
-    const orbitNode = new THREE.Mesh(orbitNodeGeo, orbitNodeMat);
-    const nodePt = orbitPoints[Math.floor(orbitPoints.length * 0.45)];
-    orbitNode.position.set(nodePt.x, nodePt.y, -4.5);
-    orbitGroup.add(orbitNode);
+      if (t < T_PHASE1_END) {
+        const [posP, spd] = trapezoidalMotion(t / T_PHASE1_END, 0.28);
+        studentX = lerp(WORLD_A_START_X, WORLD_A_EDGE_X, posP);
+        normalizedSpeed = t < T_PHASE1_END - 0.05 ? spd : 0;
+      } else if (t < T_PHASE4_END) {
+        studentX = WORLD_A_EDGE_X;
+        normalizedSpeed = 0;
+      } else if (t < T_PHASE5_END) {
+        const [posP, spd] = trapezoidalMotion(crossU, 0.16);
+        studentX = lerp(WORLD_A_EDGE_X, WORLD_B_DEST_X, posP);
+        normalizedSpeed = crossU < 0.995 ? spd : 0;
+      } else {
+        studentX = WORLD_B_DEST_X;
+        normalizedSpeed = 0;
+      }
 
-    // -------------------------------------------------------------------------
-    // GROUND TERRAIN & CRAGGY ROCK BASE BELOW GATEWAY
-    // -------------------------------------------------------------------------
-    const groundGeo = new THREE.PlaneGeometry(70, 50, 32, 32);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x050507,
-      roughness: 0.95,
-      metalness: 0.05,
-    });
-    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.rotation.x = -Math.PI / 2;
-    groundMesh.position.set(0, -2.4, -8);
-    groundMesh.receiveShadow = true;
-    scene.add(groundMesh);
+      let bridgeDip = 0;
+      if (studentX > BRIDGE_START_X && studentX < BRIDGE_END_X) {
+        const bridgeSpanU = (studentX - BRIDGE_START_X) / (BRIDGE_END_X - BRIDGE_START_X);
+        bridgeDip = 0.03 * Math.sin(bridgeSpanU * Math.PI);
+      }
 
-    // Dark rocky cliff bluff underneath the portal and bridge touchdown
-    const rockMat = new THREE.MeshStandardMaterial({
-      color: 0x09090c,
-      roughness: 0.88,
-      metalness: 0.15,
-      flatShading: true,
-    });
-    const rockGroup = new THREE.Group();
-    scene.add(rockGroup);
+      const totalDistanceWalked = Math.max(0, studentX - WORLD_A_START_X);
+      const stridePhase = (totalDistanceWalked / STRIDE_LEN) * Math.PI * 2;
+      const strideAmp = clamp01(normalizedSpeed * 1.15);
 
-    const cliff1 = new THREE.Mesh(new THREE.ConeGeometry(3.4, 3.0, 8), rockMat);
-    cliff1.position.set(3.6, -1.0, -3.4);
-    cliff1.rotation.y = 0.5;
-    cliff1.scale.set(1.4, 0.9, 1.2);
-    rockGroup.add(cliff1);
+      let lookPitch = 0;
+      let lookYaw = 0;
+      if (t >= T_PHASE1_END && t < T_PHASE2_END) {
+        const p = Math.sin(riseU * Math.PI);
+        lookPitch = 0.24 * p;
+        lookYaw = 0.12 * p;
+      } else if (t >= T_PHASE5_END) {
+        lookPitch = -0.14 * smoothstep(possibilityU) + Math.sin(t * 1.6) * 0.025;
+        lookYaw = 0.18 * smoothstep(possibilityU) + Math.cos(t * 1.1) * 0.04;
+      }
 
-    const cliff2 = new THREE.Mesh(new THREE.ConeGeometry(2.6, 2.4, 7), rockMat);
-    cliff2.position.set(2.4, -1.4, -2.8);
-    cliff2.rotation.y = -0.3;
-    cliff2.scale.set(1.1, 0.8, 1.0);
-    rockGroup.add(cliff2);
+      applyStudentPose(studentRig, {
+        x: studentX,
+        z: 0,
+        stridePhase,
+        strideAmp,
+        lean: 0.07 * strideAmp,
+        lookPitch,
+        lookYaw,
+        facingYaw: Math.PI / 2 - 0.15 * smoothstep(possibilityU),
+        bridgeDip,
+      });
 
-    // -------------------------------------------------------------------------
-    // ARCHITECTURAL BRIDGE STRUCTURE
-    // Sweeps gracefully in right viewport half (x ~ 0.6 to 3.3)
-    // Left half (x < 0.4) is open negative space for typography and buttons
-    // -------------------------------------------------------------------------
-    const bridgeGroup = new THREE.Group();
-    scene.add(bridgeGroup);
+      applyRoboticHandPose(handRig, {
+        riseProgress: riseU,
+        transformProgress: transformU,
+        settleBounce,
+        connectProgress: connectU,
+        studentX,
+        bridgeDip,
+        ambientPulse: Math.max(0, t - T_PHASE5_END),
+      });
 
-    // The bridge catenary spline: sweeps smoothly upward from center-right to gateway
-    const bridgeCurvePoints = [
-      new THREE.Vector3(0.5, -2.0, 0.4),
-      new THREE.Vector3(1.3, -1.0, -0.4),
-      new THREE.Vector3(2.0, -0.2, -1.3),
-      new THREE.Vector3(2.6, 0.38, -2.1),
-      new THREE.Vector3(3.15, 0.66, -2.8),
-      new THREE.Vector3(3.55, 0.72, -3.4), // Smooth entry passing cleanly through portal
-    ];
-    const bridgeSpline = new THREE.CatmullRomCurve3(bridgeCurvePoints);
-
-    // 1. Curved Foundation Under-Arch (Monumental architectural parabolic arch)
-    const archShape = new THREE.Shape();
-    archShape.moveTo(-0.55, -0.45);
-    archShape.lineTo(0.55, -0.45);
-    archShape.lineTo(0.46, 0.12);
-    archShape.lineTo(-0.46, 0.12);
-    archShape.closePath();
-
-    const archExtrudeSettings = {
-      steps: 48,
-      bevelEnabled: true,
-      bevelThickness: 0.05,
-      bevelSize: 0.04,
-      extrudePath: bridgeSpline,
-    };
-    const archGeo = new THREE.ExtrudeGeometry(archShape, archExtrudeSettings);
-    const bridgeMetalMat = new THREE.MeshStandardMaterial({
-      color: 0x121215,
-      roughness: 0.35,
-      metalness: 0.8,
-    });
-    const archMesh = new THREE.Mesh(archGeo, bridgeMetalMat);
-    archMesh.castShadow = true;
-    archMesh.receiveShadow = true;
-    bridgeGroup.add(archMesh);
-
-    // 2. Roadway Deck Ribbon (Horizontal Architectural Flat Deck)
-    const deckWidth = 1.15;
-    const deckThickness = 0.08;
-    const deckSegments = 60;
-    const deckGeo = new THREE.BufferGeometry();
-    const deckVerts: number[] = [];
-    const deckNorms: number[] = [];
-    const deckUvs: number[] = [];
-
-    for (let i = 0; i <= deckSegments; i++) {
-      const u = i / deckSegments;
-      const pt = bridgeSpline.getPointAt(u);
-      const tangent = bridgeSpline.getTangentAt(u).normalize();
-      // True horizontal deck cross-vector (prevents any twist)
-      const binormal = new THREE.Vector3(tangent.z, 0, -tangent.x).normalize();
-      const normal = new THREE.Vector3().crossVectors(binormal, tangent).normalize();
-
-      const pL = pt.clone().add(binormal.clone().multiplyScalar(-deckWidth * 0.5));
-      const pR = pt.clone().add(binormal.clone().multiplyScalar(deckWidth * 0.5));
-      pL.y += deckThickness * 0.5;
-      pR.y += deckThickness * 0.5;
-
-      deckVerts.push(pL.x, pL.y, pL.z, pR.x, pR.y, pR.z);
-      deckNorms.push(normal.x, normal.y, normal.z, normal.x, normal.y, normal.z);
-      deckUvs.push(0, u, 1, u);
-    }
-
-    const deckIndices: number[] = [];
-    for (let i = 0; i < deckSegments; i++) {
-      const a = i * 2;
-      const b = i * 2 + 1;
-      const c = (i + 1) * 2;
-      const d = (i + 1) * 2 + 1;
-      deckIndices.push(a, c, b, b, c, d);
-    }
-    deckGeo.setIndex(deckIndices);
-    deckGeo.setAttribute("position", new THREE.Float32BufferAttribute(deckVerts, 3));
-    deckGeo.setAttribute("normal", new THREE.Float32BufferAttribute(deckNorms, 3));
-    deckGeo.setAttribute("uv", new THREE.Float32BufferAttribute(deckUvs, 2));
-
-    const deckMat = new THREE.MeshStandardMaterial({
-      color: 0x0e0e11,
-      roughness: 0.42,
-      metalness: 0.7,
-    });
-    const deckMesh = new THREE.Mesh(deckGeo, deckMat);
-    deckMesh.receiveShadow = true;
-    bridgeGroup.add(deckMesh);
-
-    // 3. Laser Crimson Optical Guide Rail (Perimeter Line running along bridge edge)
-    const railPointsLeft: THREE.Vector3[] = [];
-    for (let i = 0; i <= 50; i++) {
-      const u = i / 50;
-      const pt = bridgeSpline.getPointAt(u);
-      const tangent = bridgeSpline.getTangentAt(u).normalize();
-      const binormal = new THREE.Vector3(tangent.z, 0, -tangent.x).normalize();
-      const edgePt = pt.clone().add(binormal.multiplyScalar(-deckWidth * 0.51));
-      edgePt.y += deckThickness * 0.65;
-      railPointsLeft.push(edgePt);
-    }
-    const railSpline = new THREE.CatmullRomCurve3(railPointsLeft);
-    const railGeo = new THREE.TubeGeometry(railSpline, 48, 0.026, 8, false);
-    const crimsonRailMat = new THREE.MeshStandardMaterial({
-      color: 0xd41514,
-      emissive: 0xd41514,
-      emissiveIntensity: 0.0, // Awakens as bridge assembles
-      roughness: 0.12,
-      metalness: 0.9,
-    });
-    const railMesh = new THREE.Mesh(railGeo, crimsonRailMat);
-    bridgeGroup.add(railMesh);
-
-    // 4. Structural Vertical Strut Pylons
-    const strutsGroup = new THREE.Group();
-    bridgeGroup.add(strutsGroup);
-    const strutMat = new THREE.MeshStandardMaterial({
-      color: 0x1c1c20,
-      roughness: 0.4,
-      metalness: 0.8,
-    });
-    for (let i = 1; i <= 4; i++) {
-      const u = i / 5;
-      const pt = bridgeSpline.getPointAt(u);
-      const groundY = -2.2;
-      const h = pt.y - groundY;
-      const strutMesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.06, 0.09, h, 12),
-        strutMat
+      // World B Illumination ("Phase 6 — Possibility")
+      const worldBGlow = smoothstep(possibilityU);
+      worlds.worldBWindowMat.emissiveIntensity =
+        (isLightMode ? 0.55 : 0.75) + worldBGlow * (isLightMode ? 0.85 : 1.35);
+      worlds.worldBBeaconMat.color.lerpColors(
+        COLOR_UNLIT_RAIL,
+        COLOR_LIT_CRIMSON,
+        0.3 + connectU * 0.7
       );
-      strutMesh.position.set(pt.x, groundY + h * 0.5, pt.z);
-      strutMesh.castShadow = true;
-      strutsGroup.add(strutMesh);
-    }
+      worlds.worldBBeaconMat.emissiveIntensity =
+        0.35 + connectU * 0.85 + worldBGlow * 1.5;
+      worlds.worldBRingMat.opacity = 0.14 + worldBGlow * 0.38;
+      worlds.worldBLight.intensity = 1.1 + worldBGlow * 3.2;
 
-    // -------------------------------------------------------------------------
-    // MONOLITHIC GATEWAY PORTAL
-    // -------------------------------------------------------------------------
-    const gatewayGroup = new THREE.Group();
-    scene.add(gatewayGroup);
+      // Synchronized Camera Framing (Desktop vs Mobile)
+      mouse.x += (mouse.targetX - mouse.x) * 0.05;
+      mouse.y += (mouse.targetY - mouse.y) * 0.05;
 
-    const gateTargetPos = new THREE.Vector3(3.1, 0.65, -2.8);
-    const gateStartPos = new THREE.Vector3(3.1, 14.0, -2.8);
-    gatewayGroup.position.copy(gateStartPos);
-    gatewayGroup.rotation.y = -0.36;
+      const w = container.clientWidth;
+      const mobileView = w < 768;
 
-    // Outer Monolithic Portal Frame (Titanium basalt structure)
-    const portalShape = new THREE.Shape();
-    const pw = 1.45;
-    const ph = 2.15;
-    const pThick = 0.32;
-    // Outer boundary
-    portalShape.moveTo(-pw, 0);
-    portalShape.lineTo(pw, 0);
-    portalShape.lineTo(pw, ph * 2);
-    portalShape.lineTo(-pw, ph * 2);
-    portalShape.closePath();
+      // Desktop: Frame the chasm & robotic hand cleanly on the right side of the viewport (zero overlap with left text)
+      // Mobile: Frame the entire bridge span in the lower half of the viewport below the top text & CTA
+      const followShiftX = lerp(0.0, 0.42, easeInOutCubic(crossU));
+      const camPosX = (mobileView ? 2.25 : 0.92) + followShiftX * 0.52 + mouse.x * 0.22;
+      const camPosY = (mobileView ? 1.55 : 1.12) + mouse.y * 0.12;
+      const camPosZ = mobileView ? 8.15 : 5.75;
 
-    // Inner doorway cutout
-    const holePath = new THREE.Path();
-    const iw = pw - pThick;
-    const ih = ph * 2 - pThick;
-    holePath.moveTo(-iw, 0);
-    holePath.lineTo(iw, 0);
-    holePath.lineTo(iw, ih);
-    holePath.lineTo(-iw, ih);
-    holePath.closePath();
-    portalShape.holes.push(holePath);
+      camera.position.set(camPosX, camPosY, camPosZ);
 
-    const portalExtrudeSettings = {
-      depth: 0.52,
-      bevelEnabled: true,
-      bevelSegments: 4,
-      bevelThickness: 0.06,
-      bevelSize: 0.05,
+      const lookTargetX = (mobileView ? 2.32 : 1.35) + followShiftX * 0.62 + mouse.x * 0.08;
+      const lookTargetY = (mobileView ? 0.68 : 0.22) + mouse.y * 0.04;
+      camera.lookAt(lookTargetX, lookTargetY, -0.25);
     };
-    const portalGeo = new THREE.ExtrudeGeometry(portalShape, portalExtrudeSettings);
-    portalGeo.center();
-    portalGeo.translate(0, ph, 0);
 
-    const portalMat = new THREE.MeshStandardMaterial({
-      color: 0x141418,
-      roughness: 0.28,
-      metalness: 0.82,
-    });
-    const portalMesh = new THREE.Mesh(portalGeo, portalMat);
-    portalMesh.castShadow = true;
-    portalMesh.receiveShadow = true;
-    gatewayGroup.add(portalMesh);
+    const tick = (now: number) => {
+      animId = 0;
+      const dt = Math.min(0.06, Math.max(0.001, (now - lastTick) / 1000));
+      lastTick = now;
 
-    // Inner Laser Crimson Neon Channel Lining - Pure vivid #D41514 glow
-    const neonShape = new THREE.Shape();
-    neonShape.moveTo(-iw + 0.03, 0.02);
-    neonShape.lineTo(iw - 0.03, 0.02);
-    neonShape.lineTo(iw - 0.03, ih - 0.03);
-    neonShape.lineTo(-iw + 0.03, ih - 0.03);
-    neonShape.closePath();
-
-    const neonInnerHole = new THREE.Path();
-    neonInnerHole.moveTo(-iw + 0.12, 0.02);
-    neonInnerHole.lineTo(iw - 0.12, 0.02);
-    neonInnerHole.lineTo(iw - 0.12, ih - 0.12);
-    neonInnerHole.lineTo(-iw + 0.12, ih - 0.12);
-    neonInnerHole.closePath();
-    neonShape.holes.push(neonInnerHole);
-
-    const neonGeo = new THREE.ExtrudeGeometry(neonShape, { depth: 0.16, bevelEnabled: false });
-    neonGeo.center();
-    neonGeo.translate(0, ph, 0);
-
-    const neonMat = new THREE.MeshStandardMaterial({
-      color: 0xd41514,
-      emissive: 0xd41514,
-      emissiveIntensity: 0.0, // Ignites upon landing
-      roughness: 0.1,
-      metalness: 0.9,
-    });
-    const neonMesh = new THREE.Mesh(neonGeo, neonMat);
-    gatewayGroup.add(neonMesh);
-
-    // -------------------------------------------------------------------------
-    // FUTURE ILLUMINATED CITYSCAPE SILHOUETTES BEYOND GATEWAY
-    // Towers tightly cluster behind and through the gateway opening
-    // -------------------------------------------------------------------------
-    const cityGroup = new THREE.Group();
-    cityGroup.position.set(3.3, 0.4, -5.2);
-    cityGroup.rotation.y = -0.36;
-    scene.add(cityGroup);
-
-    // Skyscraper window texture generator
-    const makeWindowCanvas = () => {
-      const c = document.createElement("canvas");
-      c.width = 128;
-      c.height = 256;
-      const ctx = c.getContext("2d");
-      if (ctx) {
-        ctx.fillStyle = "#0c1017";
-        ctx.fillRect(0, 0, 128, 256);
-        ctx.fillStyle = "#e2e8f0";
-        for (let y = 8; y < 248; y += 7) {
-          for (let x = 6; x < 122; x += 10) {
-            if (Math.random() > 0.4) {
-              ctx.fillRect(x, y, 5, 3.5);
-            }
-          }
-        }
-      }
-      return new THREE.CanvasTexture(c);
-    };
-    const windowTex = makeWindowCanvas();
-
-    const cityMat = new THREE.MeshStandardMaterial({
-      color: 0x1e2430,
-      map: windowTex,
-      emissive: 0x94a3b8,
-      emissiveMap: windowTex,
-      emissiveIntensity: 0.6,
-      roughness: 0.35,
-      metalness: 0.65,
-      transparent: true,
-      opacity: 0.0,
-    });
-
-    const towerGeos = [
-      new THREE.BoxGeometry(0.38, 3.6, 0.38),
-      new THREE.BoxGeometry(0.52, 4.8, 0.52),
-      new THREE.BoxGeometry(0.32, 5.8, 0.32),
-      new THREE.BoxGeometry(0.44, 4.2, 0.44),
-      new THREE.BoxGeometry(0.60, 3.2, 0.60),
-      new THREE.BoxGeometry(0.35, 5.2, 0.35),
-    ];
-    for (let i = 0; i < 12; i++) {
-      const g = towerGeos[i % towerGeos.length];
-      const mesh = new THREE.Mesh(g, cityMat);
-      mesh.position.set((i - 5.5) * 0.22, (g.parameters.height || 3) * 0.5, (i % 3) * -0.3);
-      cityGroup.add(mesh);
-
-      // Antenna spires on tallest towers with beacon lights
-      if (i % 2 === 0) {
-        const spire = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.012, 0.018, 1.4, 6),
-          new THREE.MeshBasicMaterial({ color: 0xff4d4f })
-        );
-        spire.position.set(mesh.position.x, (g.parameters.height || 3) + 0.7, mesh.position.z);
-        cityGroup.add(spire);
-      }
-    }
-
-    // -------------------------------------------------------------------------
-    // THREE REALISTIC 3D STUDENT CHARACTERS (Standing/Walking on Bridge)
-    // -------------------------------------------------------------------------
-    const studentsGroup = new THREE.Group();
-    scene.add(studentsGroup);
-
-    const studentRigs: StudentRig[] = [
-      createStudentRig(0.88), // Student 1 (Left - prominent backpack)
-      createStudentRig(0.82), // Student 2 (Center - natural silhouette)
-      createStudentRig(0.86), // Student 3 (Right - lead student near gateway)
-    ];
-
-    // Offsets along bridge curve (u values: ~0.38, 0.52, 0.66)
-    studentRigs[0].offsetT = -0.16;
-    studentRigs[1].offsetT = -0.07;
-    studentRigs[2].offsetT = 0.05;
-
-    studentRigs.forEach((rig) => {
-      rig.root.visible = false;
-      studentsGroup.add(rig.root);
-    });
-
-    // -------------------------------------------------------------------------
-    // ANIMATION TICK LOOP
-    // -------------------------------------------------------------------------
-    let animId: number;
-    let clockStart = performance.now();
-    let isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    setIsLoaded(true);
-
-    const render = () => {
-      const now = performance.now();
-      const elapsed = isReduced ? T_FINAL_HERO : (now - clockStart) / 1000;
-      setSequenceProgress(Math.min(100, Math.round((elapsed / T_FINAL_HERO) * 100)));
-
-      // 1. Mouse Parallax Interpolation (Smooth Damping)
-      mouse.x += (mouse.targetX - mouse.x) * 0.045;
-      mouse.y += (mouse.targetY - mouse.y) * 0.045;
-
-      // 2. Camera Choreography across the 6 Scenes
-      if (elapsed < T_GATEWAY_START) {
-        // Scene 1 & 2: Wide panoramic angle watching bridge construction
-        const p = easeInOutCubic(clamp(elapsed / T_GATEWAY_START, 0, 1));
-        camera.position.lerpVectors(startCamPos, new THREE.Vector3(-0.6, 2.0, 8.6), p);
-      } else if (elapsed < T_GATEWAY_LAND) {
-        // Scene 3: Camera tracks down as the gateway lands
-        const p = easeOutCubic(clamp((elapsed - T_GATEWAY_START) / (T_GATEWAY_LAND - T_GATEWAY_START), 0, 1));
-        camera.position.lerpVectors(new THREE.Vector3(-0.6, 2.0, 8.6), finalCamPos, p);
-      } else {
-        // Scene 4 - 6: Stable hero composition with gentle pointer parallax
-        camera.position.set(
-          finalCamPos.x + mouse.x * 0.32,
-          finalCamPos.y + mouse.y * 0.18,
-          finalCamPos.z - Math.abs(mouse.x) * 0.06
-        );
-      }
-      camera.lookAt(1.2 + mouse.x * 0.12, 0.55 + mouse.y * 0.06, -1.8);
-
-      // 3. Scene 2: Bridge Construction Animation (Foundations & Deck Unrolling)
-      if (elapsed < T_BRIDGE_START) {
-        bridgeGroup.scale.set(0.01, 0.01, 0.01);
-        bridgeGroup.position.y = -4.0;
-        crimsonRailMat.emissiveIntensity = 0.0;
-      } else if (elapsed <= T_BRIDGE_END) {
-        const bp = easeOutCubic((elapsed - T_BRIDGE_START) / (T_BRIDGE_END - T_BRIDGE_START));
-        bridgeGroup.scale.set(bp, bp, bp);
-        bridgeGroup.position.y = (-4.0 * (1 - bp));
-        crimsonRailMat.emissiveIntensity = bp * 2.2;
-      } else {
-        bridgeGroup.scale.set(1, 1, 1);
-        bridgeGroup.position.y = 0;
-        crimsonRailMat.emissiveIntensity = 2.4;
+      if (!isReducedMotion) {
+        elapsedSec += dt;
       }
 
-      // 4. Scene 3: Gateway Descent, Landing Settle & Ignition
-      if (elapsed < T_GATEWAY_START) {
-        gatewayGroup.position.copy(gateStartPos);
-        gatewayGroup.visible = false;
-        neonMat.emissiveIntensity = 0.0;
-        crimsonGatewayLight.intensity = 0.0;
-      } else if (elapsed <= T_GATEWAY_LAND) {
-        gatewayGroup.visible = true;
-        const gp = easeInOutCubic((elapsed - T_GATEWAY_START) / (T_GATEWAY_LAND - T_GATEWAY_START));
-        // Vertical descent with realistic acceleration
-        const currY = gateStartPos.y + (gateTargetPos.y - gateStartPos.y) * gp;
-        gatewayGroup.position.set(gateTargetPos.x, currY, gateTargetPos.z);
-        neonMat.emissiveIntensity = gp * 0.8;
-      } else {
-        // Settle micro-impact response right after landing
-        gatewayGroup.visible = true;
-        const settleTime = elapsed - T_GATEWAY_LAND;
-        const impactBounce = Math.exp(-settleTime * 6) * Math.cos(settleTime * 14) * 0.08;
-        gatewayGroup.position.set(gateTargetPos.x, gateTargetPos.y + impactBounce, gateTargetPos.z);
-
-        // Bridge subtle impact flex
-        bridgeGroup.position.y = -impactBounce * 0.35;
-
-        // Laser Crimson ignition - Brilliant #D41514 bloom
-        const glowP = clamp((elapsed - T_GATEWAY_LAND) / (T_GATEWAY_GLOW - T_GATEWAY_LAND), 0, 1);
-        neonMat.emissiveIntensity = 1.4 + glowP * 3.6;
-        crimsonGatewayLight.intensity = glowP * 4.2;
-      }
-
-      // 5. Scene 4 & 5: Students Arrive & Walk Toward / Settle in Iconic Composition
-      if (elapsed >= T_STUDENTS_START) {
-        const walkElapsed = elapsed - T_STUDENTS_START;
-        const totalWalkDuration = T_STUDENTS_CROSS - T_STUDENTS_START;
-        const walkProgress = clamp(walkElapsed / totalWalkDuration, 0, 1);
-        const isSettled = elapsed >= T_STUDENTS_CROSS;
-
-        // Target resting u positions along bridge matching reference image:
-        // Student 1 (left with backpack) -> u = 0.36
-        // Student 2 (center)             -> u = 0.50
-        // Student 3 (right near gateway) -> u = 0.64
-        const targetUs = [0.36, 0.50, 0.64];
-
-        studentRigs.forEach((rig, idx) => {
-          rig.root.visible = true;
-
-          const startU = 0.04 + idx * 0.06;
-          const endU = targetUs[idx];
-          const currU = startU + (endU - startU) * easeOutCubic(walkProgress);
-
-          const pos = bridgeSpline.getPointAt(currU);
-          const tangent = bridgeSpline.getTangentAt(currU).normalize();
-          const binormal = new THREE.Vector3(tangent.z, 0, -tangent.x).normalize();
-
-          // Staggered lateral offsets across deck width
-          const lateralOffset = idx === 0 ? -0.12 : idx === 1 ? 0.08 : -0.04;
-          pos.add(binormal.multiplyScalar(lateralOffset));
-          pos.y += deckThickness * 0.5 + 0.42; // Foot planted on deck
-
-          rig.root.position.copy(pos);
-
-          // Rotate to face along bridge incline towards portal
-          const angle = Math.atan2(tangent.x, tangent.z);
-          rig.root.rotation.y = angle;
-
-          if (!isSettled) {
-            // Active Walking Cycle Kinematics
-            const stridePhase = (walkElapsed * 3.4 + idx * 1.2);
-            const legSwing = Math.sin(stridePhase) * 0.45;
-            const armSwing = Math.sin(stridePhase + Math.PI) * 0.38;
-
-            rig.leftLeg.rotation.x = legSwing;
-            rig.rightLeg.rotation.x = -legSwing;
-            rig.leftArm.rotation.x = armSwing;
-            rig.rightArm.rotation.x = -armSwing;
-
-            rig.torso.position.y = Math.abs(Math.cos(stridePhase)) * 0.03;
-            rig.torso.rotation.y = Math.sin(stridePhase) * 0.05;
-          } else {
-            // Settled Iconic Standing Poses with subtle breathing kinematics
-            const breath = Math.sin(now * 0.0018 + idx) * 0.015;
-            rig.leftLeg.rotation.x = idx === 0 ? 0.12 : 0.08;
-            rig.rightLeg.rotation.x = idx === 0 ? -0.08 : -0.12;
-            rig.leftArm.rotation.x = 0.05;
-            rig.rightArm.rotation.x = -0.05;
-            rig.torso.position.y = breath;
-            rig.torso.rotation.y = idx === 1 ? -0.08 : 0.04;
-          }
-        });
-
-        // City skyline reveals through the gateway
-        const cityAlpha = clamp((walkElapsed - 1.0) / 2.5, 0, 0.95);
-        cityMat.opacity = cityAlpha;
-      } else {
-        studentRigs.forEach((rig) => {
-          rig.root.visible = false;
-        });
-        cityMat.opacity = 0;
-      }
-
+      evaluateSceneAtTime(elapsedSec);
       renderer.render(scene, camera);
-      animId = requestAnimationFrame(render);
+
+      if (isInView && isTabVisible) {
+        animId = requestAnimationFrame(tick);
+      }
     };
 
-    animId = requestAnimationFrame(render);
+    const startLoop = () => {
+      if (!animId && isInView && isTabVisible) {
+        lastTick = performance.now();
+        animId = requestAnimationFrame(tick);
+      }
+    };
 
-    // Responsive Resize Handler with dynamic portrait/landscape camera framing
+    evaluateSceneAtTime(elapsedSec);
+    renderer.render(scene, camera);
+    setIsLoaded(true);
+    startLoop();
+
+    const api = {
+      replay: () => {
+        elapsedSec = 0;
+        lastReportedPhase = 0;
+        markedComplete = false;
+        setIsSequenceComplete(false);
+        setCurrentPhase(1);
+        evaluateSceneAtTime(0);
+        renderer.render(scene, camera);
+        startLoop();
+      },
+      seek: (timeSec: number) => {
+        elapsedSec = Math.max(0, timeSec);
+        evaluateSceneAtTime(elapsedSec);
+        renderer.render(scene, camera);
+      },
+      getPhase: () => lastReportedPhase,
+    };
+    controlRef.current = api;
+
+    if (typeof window !== "undefined") {
+      (
+        window as unknown as { __SKILLBRIDGE_HERO_3D__?: typeof api }
+      ).__SKILLBRIDGE_HERO_3D__ = api;
+    }
+
     const onResize = () => {
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (!w || !h) return;
       camera.aspect = w / h;
-      camera.fov = w < 768 ? 46 : 36;
+      camera.fov = w < 768 ? 46 : 34;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      evaluateSceneAtTime(elapsedSec);
+      renderer.render(scene, camera);
     };
-
     const resizeObserver = new ResizeObserver(onResize);
     resizeObserver.observe(container);
 
-    // Visibility observer to conserve GPU resources when scrolled offscreen
-    const visObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        if (!animId) animId = requestAnimationFrame(render);
-      } else {
+    const intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        isInView = entry.isIntersecting;
+        if (isInView) {
+          startLoop();
+        } else if (animId) {
+          cancelAnimationFrame(animId);
+          animId = 0;
+        }
+      },
+      { threshold: 0.05 }
+    );
+    intersectionObserver.observe(container);
+
+    const onVisibilityChange = () => {
+      isTabVisible = !document.hidden;
+      if (isTabVisible) {
+        startLoop();
+      } else if (animId) {
         cancelAnimationFrame(animId);
+        animId = 0;
       }
-    });
-    visObserver.observe(container);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
-      cancelAnimationFrame(animId);
+      if (animId) cancelAnimationFrame(animId);
       window.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      themeObserver.disconnect();
       resizeObserver.disconnect();
-      visObserver.disconnect();
+      intersectionObserver.disconnect();
+      envTexture.dispose();
+      pmremGenerator.dispose();
       renderer.dispose();
       scene.clear();
     };
-  }, [isPlaying]);
+  }, []);
+
+  if (webglFallback) {
+    return (
+      <div
+        className="absolute inset-0 flex items-center justify-end overflow-hidden bg-gradient-to-br from-[#EEF4FB] via-[#E2ECF8] to-[#D5E3F4] dark:from-[#080808] dark:via-[#0D1017] dark:to-[#131824]"
+        aria-label="SkillBridge Robotic Hand Bridge Fallback Illustration"
+      >
+        <svg
+          viewBox="0 0 1200 600"
+          className="w-full h-full object-cover opacity-90"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path d="M0 360 L380 360 L320 600 L0 600 Z" fill="currentColor" className="text-slate-300 dark:text-zinc-900" />
+          <path d="M820 340 L1200 340 L1200 600 L880 600 Z" fill="currentColor" className="text-slate-300 dark:text-zinc-900" />
+          <rect x="880" y="160" width="65" height="180" fill="#38BDF8" fillOpacity="0.25" />
+          <rect x="960" y="110" width="80" height="230" fill="#38BDF8" fillOpacity="0.35" />
+          <path
+            d="M360 365 C480 340, 700 340, 840 345 L830 385 C700 385, 480 390, 360 410 Z"
+            fill="#CDCBCA"
+          />
+          <line x1="370" y1="362" x2="830" y2="344" stroke="#D41514" strokeWidth="4" />
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <div
       ref={containerRef}
       className="hero-3d-scene-container absolute inset-0 w-full h-full overflow-hidden pointer-events-auto"
-      aria-label="SkillBridge Interactive 3D Cinematic Bridge Experience"
+      aria-label="SkillBridge 3D Cinematic Experience: The Hand That Becomes Your Bridge"
     >
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full block cursor-grab active:cursor-grabbing outline-none"
+        className={`absolute inset-0 w-full h-full block outline-none transition-opacity duration-500 ${
+          isLoaded ? "opacity-100" : "opacity-0"
+        }`}
       />
 
-      {/* Subtle Progress & Sequence Status Indicator */}
+      {/* Subtle Phase Storytelling Status & Replay Control */}
       <div
-        className={`pointer-events-none absolute bottom-5 right-6 z-20 flex items-center gap-2.5 rounded-full border border-white/10 bg-[#080808]/75 px-3 py-1 text-[0.68rem] font-mono text-[#8E8C8B] backdrop-blur-md transition-opacity duration-700 ${
-          isLoaded ? "opacity-90" : "opacity-0"
+        className={`pointer-events-none absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-20 flex items-center gap-2.5 rounded-full border border-slate-900/10 dark:border-white/12 bg-white/80 dark:bg-[#080808]/80 px-3.5 py-1.5 text-[0.68rem] sm:text-[0.72rem] font-mono text-slate-700 dark:text-[#CDCBCA] shadow-sm backdrop-blur-md transition-opacity duration-500 ${
+          isLoaded ? "opacity-95" : "opacity-0"
         }`}
       >
-        <span className="relative flex h-1.5 w-1.5">
+        <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#D41514] opacity-75" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#D41514]" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-[#D41514]" />
         </span>
-        <span>
-          {sequenceProgress < 25
-            ? "Scene 1: Environment Awake"
-            : sequenceProgress < 45
-            ? "Scene 2: Bridge Assembling"
-            : sequenceProgress < 65
-            ? "Scene 3: Gateway Descending"
-            : sequenceProgress < 85
-            ? "Scene 4: Students Approaching"
-            : sequenceProgress < 100
-            ? "Scene 5: Crossing Gateway"
-            : "SkillBridge 3D Parallax Active"}
+        <span data-testid="hero-phase-indicator">
+          {PHASE_LABELS[currentPhase] || "Phase 6: Possibility"}
         </span>
 
-        {sequenceProgress >= 98 && (
+        {isSequenceComplete && (
           <button
             type="button"
-            onClick={replay}
-            className="pointer-events-auto ml-1.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[0.62rem] text-[#CDCBCA] hover:text-white hover:bg-white/10 transition-colors"
-            title="Replay Cinematic Opening Sequence"
+            onClick={handleReplay}
+            data-testid="hero-replay-btn"
+            className="pointer-events-auto ml-1.5 inline-flex items-center gap-1 rounded-full border border-slate-900/10 dark:border-white/15 bg-slate-900/5 dark:bg-white/10 px-2 py-0.5 text-[0.64rem] font-medium text-slate-900 dark:text-white hover:bg-[#D41514] hover:text-white dark:hover:bg-[#D41514] transition-colors cursor-pointer"
+            title="Replay the Robotic Hand Bridge sequence"
           >
             ↻ Replay
           </button>
