@@ -4,33 +4,61 @@ import React from "react";
 import CinematicBridgeHero3D from "./CinematicBridgeHero3D";
 
 /**
- * HeroStage: Houses the interactive 3D WebGL experience for the SkillBridge Hero Section
- * ("The Hand That Becomes Your Bridge"), along with theme-adaptive sky/horizon lighting
- * and a left-column readability scrim for both Light Mode and Dark Mode.
+ * HeroStage: Houses the photorealistic 3D WebGL experience for the SkillBridge Hero Section
+ * ("The Hand That Becomes Your Bridge"), backed by art-directed daylight and blue-hour
+ * environmental horizon photography and a balanced left-column readability scrim.
  */
 export default function HeroStage() {
   return (
     <div
-      className="hero-stage absolute inset-0 overflow-hidden pointer-events-none select-none bg-gradient-to-b from-[#F2EFE9] via-[#E4ECF5] to-[#D6E0EC] dark:from-[#080808] dark:via-[#0B0E14] dark:to-[#080808] transition-colors duration-500"
+      className="hero-stage absolute inset-0 overflow-hidden pointer-events-none select-none bg-[#1c2b3e] dark:bg-[#080808] transition-colors duration-500"
       aria-hidden="true"
     >
-      {/* Warm Architectural Sun Glow on Left (World A) in Light Mode */}
-      <div
-        className="pointer-events-none absolute left-[18%] top-[8%] h-[46vh] w-[42vw] rounded-full opacity-55 dark:opacity-15 blur-[95px] transition-opacity duration-700"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(251, 191, 36, 0.16) 0%, rgba(212, 21, 20, 0.05) 52%, transparent 74%)",
-        }}
-      />
+      {/* Light Mode Photorealistic Daylight Sky & Valley Horizon Plate (4K Ultra-HD Responsive) */}
+      <picture className="pointer-events-none absolute inset-0 w-full h-full opacity-95 dark:opacity-0 transition-opacity duration-700">
+        <source
+          type="image/avif"
+          srcSet="/hero/env-daylight-sky-1080.avif 1080w, /hero/env-daylight-sky-1920.avif 1920w, /hero/env-daylight-sky-4k.avif 3840w"
+          sizes="100vw"
+        />
+        <source
+          type="image/webp"
+          srcSet="/hero/env-daylight-sky-1080.webp 1080w, /hero/env-daylight-sky-1920.webp 1920w, /hero/env-daylight-sky-4k.webp 3840w"
+          sizes="100vw"
+        />
+        <img
+          src="/hero/env-daylight-sky.jpg"
+          alt=""
+          width={3840}
+          height={2160}
+          fetchPriority="high"
+          decoding="async"
+          className="w-full h-full object-cover object-center"
+        />
+      </picture>
 
-      {/* Ambient Horizon Glow behind World B (Right Side) — Adapts to Light & Dark Mode */}
-      <div
-        className="pointer-events-none absolute right-[-5%] top-[12%] h-[58vh] w-[58vw] rounded-full opacity-60 dark:opacity-45 blur-[90px] transition-opacity duration-700"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(14, 165, 233, 0.20) 0%, rgba(212, 21, 20, 0.08) 48%, transparent 72%)",
-        }}
-      />
+      {/* Dark Mode Photorealistic Blue-Hour Twilight Sky & Gorge Horizon Plate (4K Ultra-HD Responsive) */}
+      <picture className="pointer-events-none absolute inset-0 w-full h-full opacity-0 dark:opacity-90 transition-opacity duration-700">
+        <source
+          type="image/avif"
+          srcSet="/hero/env-evening-sky-1080.avif 1080w, /hero/env-evening-sky-1920.avif 1920w, /hero/env-evening-sky-4k.avif 3840w"
+          sizes="100vw"
+        />
+        <source
+          type="image/webp"
+          srcSet="/hero/env-evening-sky-1080.webp 1080w, /hero/env-evening-sky-1920.webp 1920w, /hero/env-evening-sky-4k.webp 3840w"
+          sizes="100vw"
+        />
+        <img
+          src="/hero/env-evening-sky.jpg"
+          alt=""
+          width={3840}
+          height={2160}
+          fetchPriority="high"
+          decoding="async"
+          className="w-full h-full object-cover object-center"
+        />
+      </picture>
 
       {/* Interactive 3D Canvas Slot */}
       <div

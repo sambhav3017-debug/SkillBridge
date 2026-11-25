@@ -99,13 +99,6 @@ export interface Translations {
     themeDark: string;
     themeSystem: string;
     themeDesc: string;
-    accessibility: string;
-    reduceMotion: string;
-    reduceMotionDesc: string;
-    textScale: string;
-    textScaleDesc: string;
-    contrast: string;
-    contrastDesc: string;
     shortcuts: string;
     openSearch: string;
     globalSearch: string;
@@ -243,7 +236,7 @@ export const translations: Record<Language, Translations> = {
     },
     settings: {
       title: "Website Settings",
-      subtitle: "Personalize language, theme, accessibility, and platform preferences",
+      subtitle: "Personalize language, theme, and platform preferences",
       language: "Language",
       languageSubtitle: "Select your preferred interface language",
       langEn: "English",
@@ -254,14 +247,6 @@ export const translations: Record<Language, Translations> = {
       themeSystem: "System",
       themeDesc:
         "System mode synchronizes automatically with your operating system day/night schedule.",
-      accessibility: "Accessibility",
-      reduceMotion: "Reduce Motion",
-      reduceMotionDesc:
-        "Minimize transitions and disable background 3D spring animations.",
-      textScale: "Text Scale",
-      textScaleDesc: "Adjust base font scale for enhanced on-screen readability.",
-      contrast: "Enhanced Contrast",
-      contrastDesc: "Boost border contrast and text legibility across all panels.",
       shortcuts: "Search & Navigation",
       openSearch: "Open Website Search...",
       globalSearch: "Global Search",
@@ -398,7 +383,7 @@ export const translations: Record<Language, Translations> = {
     },
     settings: {
       title: "वेबसाइट सेटिंग्स",
-      subtitle: "भाषा, थीम, सुगमता और प्लेटफॉर्म प्राथमिकताओं को अनुकूलित करें",
+      subtitle: "भाषा, थीम और प्लेटफॉर्म प्राथमिकताओं को अनुकूलित करें",
       language: "भाषा (Language)",
       languageSubtitle: "अपनी पसंदीदा इंटरफ़ेस भाषा चुनें",
       langEn: "English",
@@ -409,14 +394,6 @@ export const translations: Record<Language, Translations> = {
       themeSystem: "सिस्टम",
       themeDesc:
         "सिस्टम मोड आपके ऑपरेटिंग सिस्टम के दिन/रात शेड्यूल से स्वतः मेल खाता है।",
-      accessibility: "सुगमता (Accessibility)",
-      reduceMotion: "मोशन कम करें",
-      reduceMotionDesc:
-        "एनिमेशन और बैकग्राउंड 3D मोशन प्रभावों को कम करें।",
-      textScale: "टेक्स्ट का आकार",
-      textScaleDesc: "बेहतर पठनीयता के लिए मुख्य फ़ॉन्ट आकार समायोजित करें।",
-      contrast: "बेहतर कंट्रास्ट",
-      contrastDesc: "सभी पैनल में बॉर्डर और टेक्स्ट की स्पष्टता बढ़ाएं।",
       shortcuts: "खोज और नेविगेशन",
       openSearch: "वेबसाइट खोज खोलें...",
       globalSearch: "वैश्विक खोज",

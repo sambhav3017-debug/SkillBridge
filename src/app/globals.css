@@ -188,33 +188,41 @@
   }
 }
 
-/* User-controlled Reduced Motion Override */
-[data-reduced-motion="true"],
-[data-reduced-motion="true"] *,
-.reduce-motion,
-.reduce-motion * {
-  animation-duration: 0.001ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.001ms !important;
-  scroll-behavior: auto !important;
+/* ==========================================================================
+   SkillBridge Permanent Enhanced Contrast (Globally Applied)
+   ========================================================================== */
+html,
+[data-high-contrast="true"] {
+  filter: contrast(1.12);
 }
 
-/* User-controlled Text Size Scaling */
-[data-text-size="large"] {
-  font-size: 110%;
-}
-
-/* User-controlled Enhanced Contrast */
+:root,
 [data-high-contrast="true"] {
   --color-border: rgba(255, 255, 255, 0.38) !important;
+  --color-border-strong: rgba(255, 255, 255, 0.55) !important;
   --color-muted: #d5dce8 !important;
-  filter: contrast(1.12);
+  --modal-border: rgba(255, 255, 255, 0.35) !important;
+  --card-glass-border: rgba(255, 255, 255, 0.28) !important;
+  --glass-border: rgba(255, 255, 255, 0.28) !important;
+  --btn-glass-border: rgba(255, 255, 255, 0.35) !important;
+  --btn-ghost-border: rgba(255, 255, 255, 0.22) !important;
+  --stage-border: rgba(255, 255, 255, 0.32) !important;
 }
+
+[data-theme="light"],
 [data-theme="light"][data-high-contrast="true"],
+.light,
 .light[data-high-contrast="true"] {
   --color-border: #6c788d !important;
+  --color-border-strong: #334155 !important;
   --color-muted: #111420 !important;
-  filter: contrast(1.12);
+  --color-muted-subtle: #1e293b !important;
+  --modal-border: #6c788d !important;
+  --card-glass-border: #94a3b8 !important;
+  --glass-border: #6c788d !important;
+  --btn-glass-border: #64748b !important;
+  --btn-ghost-border: #94a3b8 !important;
+  --stage-border: #6c788d !important;
 }
 
 html {
@@ -1133,11 +1141,6 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
-[data-reduced-motion="true"] .p27-thumb,
-[data-reduced-motion="true"] .t-toggle-thumb {
-  animation: none !important;
-  transition: none !important;
-}
 
 /* ==========================================================================
    SkillBridge Unified Micro-Interaction System (Pointer-Responsive)
@@ -3935,20 +3938,6 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
-[data-reduced-motion="true"] .t-stagger-line,
-[data-reduced-motion="true"] .t-stagger-loop-line,
-[data-reduced-motion="true"] .t-stagger-loop-line--1,
-[data-reduced-motion="true"] .t-stagger-loop-line--2,
-[data-reduced-motion="true"] .t-stagger-loop-icon,
-[data-reduced-motion="true"] .scroll-reveal,
-[data-reduced-motion="true"] .scroll-reveal-expressive,
-[data-reduced-motion="true"] .rise {
-  animation: none !important;
-  transition: none !important;
-  transform: none !important;
-  opacity: 1 !important;
-  filter: none !important;
-}
 
 /* ==========================================================================
    Transitions.dev: Texts Reveal (SkillBridge Wordmark Signature Loop)

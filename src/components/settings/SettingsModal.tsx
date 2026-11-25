@@ -4,12 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   X,
-  Globe,
   Sun,
   Moon,
-  Activity,
-  Type,
-  Eye,
   Search,
   RotateCcw,
   Check,
@@ -28,30 +24,6 @@ interface SettingsModalProps {
   onOpenSearch?: () => void;
 }
 
-function getInitialReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  return (
-    localStorage.getItem("skillbridge-reduced-motion") === "true" ||
-    document.documentElement.dataset.reducedMotion === "true"
-  );
-}
-
-function getInitialTextSize(): "default" | "large" {
-  if (typeof window === "undefined") return "default";
-  return localStorage.getItem("skillbridge-text-size") === "large" ||
-    document.documentElement.dataset.textSize === "large"
-    ? "large"
-    : "default";
-}
-
-function getInitialHighContrast(): boolean {
-  if (typeof window === "undefined") return false;
-  return (
-    localStorage.getItem("skillbridge-high-contrast") === "true" ||
-    document.documentElement.dataset.highContrast === "true"
-  );
-}
-
 export default function SettingsModal({
   isOpen,
   onClose,
@@ -60,12 +32,7 @@ export default function SettingsModal({
   const { theme, setThemeMode } = useTheme();
   const { language, setLanguage, t } = useLanguage();
 
-  // Accessibility settings initialized safely
-  const [reducedMotion, setReducedMotion] = useState(getInitialReducedMotion);
-  const [textSize, setTextSize] = useState<"default" | "large">(getInitialTextSize);
-  const [highContrast, setHighContrast] = useState(getInitialHighContrast);
   const [resetNotice, setResetNotice] = useState(false);
-
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   // Escape key and Outside Click detection
@@ -100,69 +67,21 @@ export default function SettingsModal({
     };
   }, [isOpen, onClose]);
 
-  // Handle Reduced Motion Toggle
-  const handleToggleReducedMotion = () => {
-    setReducedMotion((prev) => {
-      const next = !prev;
-      if (typeof window !== "undefined") {
-        if (next) {
-          document.documentElement.dataset.reducedMotion = "true";
-          localStorage.setItem("skillbridge-reduced-motion", "true");
-        } else {
-          delete document.documentElement.dataset.reducedMotion;
-          localStorage.removeItem("skillbridge-reduced-motion");
-        }
-      }
-      return next;
-    });
-  };
-
-  // Handle Text Size Change
-  const handleTextSizeChange = (size: "default" | "large") => {
-    setTextSize(size);
-    if (typeof window !== "undefined") {
-      if (size === "large") {
-        document.documentElement.dataset.textSize = "large";
-        localStorage.setItem("skillbridge-text-size", "large");
-      } else {
-        delete document.documentElement.dataset.textSize;
-        localStorage.removeItem("skillbridge-text-size");
-      }
-    }
-  };
-
-  // Handle High Contrast Toggle
-  const handleToggleHighContrast = () => {
-    setHighContrast((prev) => {
-      const next = !prev;
-      if (typeof window !== "undefined") {
-        if (next) {
-          document.documentElement.dataset.highContrast = "true";
-          localStorage.setItem("skillbridge-high-contrast", "true");
-        } else {
-          delete document.documentElement.dataset.highContrast;
-          localStorage.removeItem("skillbridge-high-contrast");
-        }
-      }
-      return next;
-    });
-  };
-
   // Reset All to Defaults
   const handleResetDefaults = () => {
     setThemeMode("dark");
-    setReducedMotion(false);
-    setTextSize("default");
-    setHighContrast(false);
     setLanguage("en");
 
     if (typeof window !== "undefined") {
+      // Purge obsolete accessibility preference items from storage
       localStorage.removeItem("skillbridge-reduced-motion");
       localStorage.removeItem("skillbridge-text-size");
       localStorage.removeItem("skillbridge-high-contrast");
       delete document.documentElement.dataset.reducedMotion;
       delete document.documentElement.dataset.textSize;
-      delete document.documentElement.dataset.highContrast;
+
+      // Enhanced Contrast remains permanently active across SkillBridge
+      document.documentElement.dataset.highContrast = "true";
     }
 
     setResetNotice(true);
@@ -281,101 +200,7 @@ export default function SettingsModal({
           </div>
         </section>
 
-        {/* Section 3: Accessibility */}
-        <section aria-labelledby="heading-accessibility" className="space-y-1.5">
-          <h3
-            id="heading-accessibility"
-            className="text-[0.68rem] font-semibold text-slate-400 dark:text-[#8E8C8B] uppercase tracking-[0.05em] px-1"
-          >
-            {t.settings.accessibility}
-          </h3>
-
-          <div className="rounded-[14px] border border-black/[0.06] dark:border-white/[0.07] bg-black/[0.025] dark:bg-[#1C1C1E] overflow-hidden">
-            {/* Reduce Motion */}
-            <div className="flex items-center justify-between gap-3 px-3 py-2.5">
-              <div className="flex items-center gap-2.5">
-                <div className="grid h-7 w-7 place-items-center rounded-[7px] bg-slate-200/80 dark:bg-[#2C2C2E] text-slate-700 dark:text-[#CDCBCA] shadow-2xs">
-                  <Activity size={14} />
-                </div>
-                <span className="text-[0.82rem] font-medium text-slate-900 dark:text-[#F5F5F7]">
-                  {t.settings.reduceMotion}
-                </span>
-              </div>
-
-              <SkillBridgeToggle
-                checked={reducedMotion}
-                onChange={handleToggleReducedMotion}
-                aria-label={t.settings.reduceMotion}
-                accent="cyan"
-              />
-            </div>
-
-            {/* Hairline Divider */}
-            <div className="border-t border-black/[0.05] dark:border-white/[0.06] ml-12" />
-
-            {/* Text Scale */}
-            <div className="flex items-center justify-between gap-3 px-3 py-2.5">
-              <div className="flex items-center gap-2.5">
-                <div className="grid h-7 w-7 place-items-center rounded-[7px] bg-slate-200/80 dark:bg-[#2C2C2E] text-slate-700 dark:text-[#CDCBCA] shadow-2xs">
-                  <Type size={14} />
-                </div>
-                <span className="text-[0.82rem] font-medium text-slate-900 dark:text-[#F5F5F7]">
-                  {t.settings.textScale}
-                </span>
-              </div>
-
-              {/* iOS Segmented Text Scale Control */}
-              <div className="flex items-center gap-0.5 rounded-[8px] bg-black/[0.05] dark:bg-[#2C2C2E] p-0.5">
-                <button
-                  type="button"
-                  onClick={() => handleTextSizeChange("default")}
-                  className={`px-2 py-0.5 text-[0.72rem] rounded-[6px] transition-all ${
-                    textSize === "default"
-                      ? "bg-white dark:bg-[#3A3A3C] text-slate-900 dark:text-white font-medium shadow-[0_1px_2px_rgba(0,0,0,0.12)]"
-                      : "text-slate-500 dark:text-[#8E8C8B] hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  100%
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTextSizeChange("large")}
-                  className={`px-2 py-0.5 text-[0.72rem] rounded-[6px] transition-all ${
-                    textSize === "large"
-                      ? "bg-white dark:bg-[#3A3A3C] text-slate-900 dark:text-white font-medium shadow-[0_1px_2px_rgba(0,0,0,0.12)]"
-                      : "text-slate-500 dark:text-[#8E8C8B] hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  110%
-                </button>
-              </div>
-            </div>
-
-            {/* Hairline Divider */}
-            <div className="border-t border-black/[0.05] dark:border-white/[0.06] ml-12" />
-
-            {/* Enhanced Contrast */}
-            <div className="flex items-center justify-between gap-3 px-3 py-2.5">
-              <div className="flex items-center gap-2.5">
-                <div className="grid h-7 w-7 place-items-center rounded-[7px] bg-slate-200/80 dark:bg-[#2C2C2E] text-slate-700 dark:text-[#CDCBCA] shadow-2xs">
-                  <Eye size={14} />
-                </div>
-                <span className="text-[0.82rem] font-medium text-slate-900 dark:text-[#F5F5F7]">
-                  {t.settings.contrast}
-                </span>
-              </div>
-
-              <SkillBridgeToggle
-                checked={highContrast}
-                onChange={handleToggleHighContrast}
-                aria-label={t.settings.contrast}
-                accent="cyan"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Section 4: Platform Shortcuts & Portals */}
+        {/* Section 3: Platform Shortcuts & Portals */}
         <section aria-labelledby="heading-shortcuts" className="space-y-1.5">
           <h3
             id="heading-shortcuts"

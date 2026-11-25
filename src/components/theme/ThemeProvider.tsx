@@ -122,7 +122,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (isTransitioningRef.current) return;
 
       const prefersReduced =
-        document.documentElement.dataset.reducedMotion === "true" ||
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       if (

@@ -81,6 +81,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-high-contrast="true"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
       className={`${jakarta.variable} ${inter.variable} ${outfit.variable} ${newsreader.variable} ${jetbrainsMono.variable} h-full antialiased`}
@@ -96,9 +97,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               else if(m==='system'){t=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}
               document.documentElement.dataset.theme=t;
               if(t==='light')document.documentElement.classList.add('light');
-              if(localStorage.getItem('skillbridge-reduced-motion')==='true')document.documentElement.dataset.reducedMotion='true';
-              if(localStorage.getItem('skillbridge-text-size')==='large')document.documentElement.dataset.textSize='large';
-              if(localStorage.getItem('skillbridge-high-contrast')==='true')document.documentElement.dataset.highContrast='true';
+
+              // Purge obsolete accessibility preferences so legacy stored values cannot interfere
+              localStorage.removeItem('skillbridge-reduced-motion');
+              localStorage.removeItem('skillbridge-text-size');
+              localStorage.removeItem('skillbridge-high-contrast');
+              delete document.documentElement.dataset.reducedMotion;
+              delete document.documentElement.dataset.textSize;
+
+              // Enhanced Contrast is permanently ON across SkillBridge
+              document.documentElement.dataset.highContrast='true';
+
               var lang=localStorage.getItem('skillbridge-lang')||'en';
               document.documentElement.lang=lang;
             }catch(e){}})();`,

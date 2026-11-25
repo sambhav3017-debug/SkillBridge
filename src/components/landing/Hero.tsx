@@ -1,27 +1,111 @@
 "use client";
 
+import { useRef } from "react";
 import HeroStage from "./hero/HeroStage";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, LogIn } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+
+/**
+ * Smooth cinematic ease-in-out with a subtle, controlled damped spring settle
+ * at the tail (max ~1.2% overshoot) matching SkillBridge's expressive motion language.
+ */
+function easeCinematicSpring(t: number): number {
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  if (t < 0.78) {
+    // Smooth quintic ease-in-out up to 78% progress
+    const u = t / 0.78;
+    const eased = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+    return eased * 0.96;
+  }
+  // Controlled damped spring settle from 0.96 -> 1.012 -> 1.0
+  const s = (t - 0.78) / 0.22;
+  const decay = Math.exp(-5.2 * s);
+  return 1 - 0.04 * decay * Math.cos(Math.PI * 1.35 * s);
+}
 
 export default function Hero() {
   const { t } = useLanguage();
+  const scrollRafRef = useRef<number | null>(null);
 
-  const handleExploreClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleScrollToEcosystem = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    const target = document.getElementById("opportunity");
-    if (target) {
-      const header = document.querySelector("header");
-      const headerHeight = header ? header.getBoundingClientRect().height : 70;
-      const elementPosition = target.getBoundingClientRect().top + window.pageYOffset;
-      const offsetPosition = Math.max(0, elementPosition - headerHeight);
+    const section = document.getElementById("ecosystem");
+    if (!section) return;
 
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth",
-      });
-      window.history.pushState(null, "", "#opportunity");
+    // Cancel any in-flight programmatic scroll
+    if (scrollRafRef.current !== null) {
+      cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = null;
     }
+
+    // Compute layout offsetTop (unaffected by CSS entrance transforms like translate3d(0, 36px, 0))
+    const heading = (section.querySelector("h2") as HTMLElement | null) || section;
+    let layoutTop = 0;
+    let node: HTMLElement | null = heading;
+    while (node) {
+      layoutTop += node.offsetTop;
+      node = node.offsetParent as HTMLElement | null;
+    }
+
+    const isMobile = window.innerWidth < 768;
+    const topBreathingRoom = isMobile ? 36 : 48;
+    const targetTop = Math.max(0, layoutTop - topBreathingRoom);
+
+    window.history.pushState(null, "", "#ecosystem");
+
+    // Respect OS prefers-reduced-motion
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      window.scrollTo({ top: targetTop, behavior: "auto" });
+      return;
+    }
+
+    const startY = window.pageYOffset;
+    const deltaY = targetTop - startY;
+    if (Math.abs(deltaY) < 2) {
+      window.scrollTo(0, targetTop);
+      return;
+    }
+
+    const duration = Math.min(1250, Math.max(850, Math.abs(deltaY) * 0.42));
+    let startTime: number | null = null;
+
+    const cancelOnUserInput = () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+      cleanupListeners();
+    };
+
+    const cleanupListeners = () => {
+      window.removeEventListener("wheel", cancelOnUserInput);
+      window.removeEventListener("touchstart", cancelOnUserInput);
+      window.removeEventListener("keydown", cancelOnUserInput);
+    };
+
+    window.addEventListener("wheel", cancelOnUserInput, { passive: true, once: true });
+    window.addEventListener("touchstart", cancelOnUserInput, { passive: true, once: true });
+    window.addEventListener("keydown", cancelOnUserInput, { passive: true, once: true });
+
+    const step = (timestamp: number) => {
+      if (startTime === null) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const eased = easeCinematicSpring(progress);
+
+      window.scrollTo({ top: startY + deltaY * eased, behavior: "instant" as ScrollBehavior });
+
+      if (progress < 1) {
+        scrollRafRef.current = requestAnimationFrame(step);
+      } else {
+        window.scrollTo({ top: targetTop, behavior: "instant" as ScrollBehavior });
+        scrollRafRef.current = null;
+        cleanupListeners();
+      }
+    };
+
+    scrollRafRef.current = requestAnimationFrame(step);
   };
 
   return (
@@ -62,7 +146,7 @@ export default function Hero() {
               <span className="text-[#0F172A] dark:text-[#CDCBCA]">
                 {t.hero.titleLine2Our}
               </span>{" "}
-              <span className="text-[#D41514] dark:text-[#D41514]">
+              <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-[#005F85] via-[#007BA7] to-[#0284C7] dark:from-[#00A8FF] dark:via-[#00E5FF] dark:to-[#70F0FF] dark:drop-shadow-[0_0_16px_rgba(0,229,255,0.24)]">
                 {t.hero.titleLine2Bridge}
               </span>
             </span>
@@ -76,14 +160,14 @@ export default function Hero() {
             A complete ecosystem to learn, build and grow — from college to career.
           </p>
 
-          {/* Primary CTA Button: Smooth Scroll to Opportunity Section */}
-          <div className="rise d4 mt-5 sm:mt-7 lg:mt-9 flex items-center">
+          {/* Hero CTA Stack: Primary Explore Opportunity + Secondary Login */}
+          <div className="rise d4 mt-5 sm:mt-7 lg:mt-9 flex flex-col items-start gap-3 sm:gap-3.5">
             <a
               id="hero-btn-primary"
-              href="#opportunity"
-              onClick={handleExploreClick}
+              href="#ecosystem"
+              onClick={handleScrollToEcosystem}
               className="btn btn-crimson group px-5 py-2.5 sm:px-6 sm:py-3.5 text-sm sm:text-base font-medium inline-flex items-center gap-2 cursor-pointer"
-              aria-label="Explore Opportunity: Scroll down to discover SkillBridge pathways and verified opportunities"
+              aria-label="Explore Opportunity: Scroll down to Three Words, One Unified Network"
             >
               <span>Explore Opportunity</span>
               <ArrowRight
@@ -91,6 +175,21 @@ export default function Hero() {
                 className="transition-transform duration-150 group-hover:translate-x-0.5 text-current"
                 aria-hidden="true"
               />
+            </a>
+
+            <a
+              id="hero-btn-login"
+              href="#ecosystem"
+              onClick={handleScrollToEcosystem}
+              className="btn group px-5 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base font-medium inline-flex items-center gap-2 cursor-pointer backdrop-blur-md border border-[#007BA7]/45 bg-white/85 text-[#00688F] hover:border-[#007BA7] hover:bg-white hover:text-[#005070] hover:shadow-[0_6px_18px_-4px_rgba(0,123,167,0.28)] dark:border-[#00E5FF]/45 dark:bg-[#0A1019]/75 dark:text-[#E0F7FF] dark:hover:border-[#00E5FF]/85 dark:hover:bg-[#0E1724]/90 dark:hover:text-[#70F0FF] dark:hover:shadow-[0_0_22px_-4px_rgba(0,229,255,0.38)] active:scale-[0.985] transition-all duration-200"
+              aria-label="Login: Scroll down to choose Student, Academia, or Industry portal"
+            >
+              <LogIn
+                size={16}
+                className="transition-transform duration-150 group-hover:translate-x-0.5 text-[#007BA7] dark:text-[#00E5FF]"
+                aria-hidden="true"
+              />
+              <span>Login</span>
             </a>
           </div>
         </div>
